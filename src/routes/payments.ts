@@ -4,25 +4,23 @@ import { authorize, protect } from "../middlewares";
 
 const payments = new Hono();
 
-// Get All payments
+// 🔹Get All payments (Only admin)
 payments.get("/", protect, authorize(["admin"]), (c) => payment.getPayments(c));
 
-// Get Single payment
+// 🔹Get Single payment (Only admin)
 payments.get("/:id", protect, authorize(["admin"]), (c) =>
   payment.getSinglePayment(c)
 );
 
-// Create payment
-payments.post("/", protect, authorize(["admin", "manager"]), (c) =>
-  payment.registerPayment(c)
-);
+// 🔹Create payment (Private)
+payments.post("/", protect, (c) => payment.registerPayment(c));
 
-// Update payment
+// 🔹Update payment (Only admin)
 payments.put("/:id", protect, authorize(["admin"]), (c) =>
   payment.updatePayment(c)
 );
 
-// Delete payment
+// 🔹Delete payment (Only admin)
 payments.delete("/:id", protect, authorize(["admin"]), (c) =>
   payment.deletePayment(c)
 );

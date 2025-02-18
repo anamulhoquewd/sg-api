@@ -3,43 +3,37 @@ import { customer } from "../controllers";
 import { authorize, protect } from "../middlewares";
 const customers = new Hono();
 
-// Get All customers
-customers.get("/", protect, authorize(["admin", "manager"]), (c) =>
-  customer.getCustomers(c)
-);
+// 🔹 Get All customers (Private)
+customers.get("/", protect, (c) => customer.getCustomers(c));
 
-// Create new customer
+// 🔹 Create new customer (Private)
 customers.post(
   "/auth/register",
   protect,
-  authorize(["admin", "manager"]),
+
   (c) => customer.registerCustomer(c)
 );
 
-// Send message to the customer with access key and their information
+// 🔹 Send message to the customer with access key and their information (Only admin)
 customers.post("/notification", protect, authorize(["admin"]), (c) =>
   customer.sendNotification(c)
 );
 
-// Regenerate Access Key
+// Regenerate Access Key (Only admin)
 customers.post("/regenerate-access-key", protect, authorize(["admin"]), (c) =>
   customer.regenerateAccessKey(c)
 );
 
-// Customer access their own account with access key
+// 🔹 Customer access their own account with access key (public)
 customers.get("/access", (c) => customer.customerAccess(c));
 
-// Get Single User
-customers.get("/:id", protect, authorize(["admin", "manager"]), (c) =>
-  customer.getSingleCustomer(c)
-);
+// Get Single User (Private)
+customers.get("/:id", protect, (c) => customer.getSingleCustomer(c));
 
-// Update User
-customers.put("/:id", protect, authorize(["admin", "manager"]), (c) =>
-  customer.updateCustomer(c)
-);
+// 🔹 Update User (Private)
+customers.put("/:id", protect, (c) => customer.updateCustomer(c));
 
-// Delete User
+// 🔹 Delete User (Only admin)
 customers.delete("/:id", protect, authorize(["admin"]), (c) =>
   customer.deleteCustomer(c)
 );

@@ -5,7 +5,7 @@ import { connectDB } from "./config/db";
 import { cors } from "hono/cors";
 import { prettyJSON } from "hono/pretty-json";
 import { logger } from "hono/logger";
-import { errorHandler, notFound, protect } from "./middlewares";
+import {  notFound, protect } from "./middlewares";
 import { users, customers, orders, payments } from "./routes";
 import { user } from "./controllers";
 
@@ -13,41 +13,49 @@ config();
 
 const app = new Hono().basePath("/api/v1");
 
-// Config MongoDB
+// 🔹 Config MongoDB
 connectDB();
 
-// Initialize middlewares
+// 🔹 Initialize middlewares
 app.use("*", logger(), prettyJSON());
 
-// Cors
+// 🔹 Cors
 app.use(cors());
 
-// Health check
+// 🔹 Health check
 app.get("/health", (c) => {
   return c.text("API is healthy!");
 });
 
-// Users Routes
+// 🔹 Users Routes
 app.route("/users", users);
 
-// Customers Routes
+// 🔹 Customers Routes
 app.route("/customers", customers);
 
-// Orders Routes
+// 🔹 Orders Routes
 app.route("/orders", orders);
 
-// Payments Routes
+// 🔹 Payments Routes
 app.route("/payments", payments);
 
-// Get me
+// 🔹 Get me
 app.get("/auth/me", protect, (c) => user.getMe(c));
 
-// Global Error Handler
-app.onError((error, c) => {
-  return errorHandler(error, c);
+// 🔹 Global Error Handler
+app.onError((error: any, c) => {
+  console.error(error);
+  return c.json(
+    {
+      success: false,
+      message: error.message,
+      stack: process.env.NODE_ENV === "production" ? null : error.stack,
+    },
+    500
+  );
 });
 
-// Not Found Handler
+// 🔹 Not Found Handler
 app.notFound((c) => {
   const error = notFound(c);
   return error;

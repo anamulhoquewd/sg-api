@@ -13,7 +13,7 @@ const JWT_SECRET = (process.env.JWT_SECRET as string) || "access";
 const JWT_REFRESH_SECRET =
   (process.env.JWT_REFRESH_SECRET as string) || "refresh";
 
-// Upload Avatar to S3
+// 🔹 Upload Avatar to S3
 const uploadAvatar = async ({
   s3,
   file,
@@ -46,7 +46,7 @@ const uploadAvatar = async ({
   }
 };
 
-// Generate Access Key for the access to the s3 bucket
+// 🔹 Generate Access Key for the access to the s3 bucket
 const generateS3AccessKey = async ({
   filename,
   s3,
@@ -71,7 +71,7 @@ const extractFilename = (url: string) => {
   return match ? match[1] : null;
 };
 
-// Generate Access Token
+// 🔹 Generate Access Token
 const generateAccessToken = async ({
   user,
   expMinutes = 5,
@@ -97,7 +97,7 @@ const generateAccessToken = async ({
   return token;
 };
 
-// Generate Refresh Token
+// 🔹 Generate Refresh Token
 const generateRefreshToken = async ({
   user,
   expDays = 7,

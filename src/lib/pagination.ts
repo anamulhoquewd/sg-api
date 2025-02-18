@@ -1,5 +1,6 @@
 import { defaults } from "../config/defaults";
 
+// 🔹 Pagination
 const pagination = ({
   page = defaults.page,
   limit = defaults.limit,

@@ -36,7 +36,7 @@ const AWS_SECRET_ACCESS_KEY =
 const JWT_REFRESH_SECRET =
   (process.env.JWT_REFRESH_SECRET as string) || "refresh";
 
-// Initialize S3 Client
+// 🔹 Initialize S3 Client
 const s3 = new S3Client({
   region: AWS_REGION,
   credentials: {
@@ -45,7 +45,7 @@ const s3 = new S3Client({
   },
 });
 
-// Get all users
+// 🔹 Get all users
 const getUsers = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
@@ -54,6 +54,7 @@ const getUsers = async (c: Context) => {
   const sortType = c.req.query("sortType") || defaults.sortType;
   const role = c.req.query("role") || "";
 
+  // Validate query parameters
   const querySchema = z.object({
     sortBy: z.enum(["createdAt", "updatedAt", "name", "email", ""]).optional(),
     sortType: z
@@ -63,12 +64,14 @@ const getUsers = async (c: Context) => {
     role: z.enum(["admin", "manager", "super_admin", ""]).optional(),
   });
 
+  // Safe Parse for better error handling
   const queryValidation = querySchema.safeParse({
     sortBy,
     sortType,
     role,
   });
 
+  // Return error if validation fails
   if (!queryValidation.success) {
     return badRequestHandler(c, {
       msg: "Invalid query parameters",
@@ -80,6 +83,7 @@ const getUsers = async (c: Context) => {
   }
 
   try {
+    // Build query
     const query: any = {};
     if (search) {
       query.$or = [
@@ -89,24 +93,27 @@ const getUsers = async (c: Context) => {
         { NID: { $regex: search, $options: "i" } },
       ];
     }
-
     if (queryValidation.data.role) {
       query.role = queryValidation.data.role;
     }
 
+    // Allowable sort fields
     const validSortFields = ["createdAt", "updatedAt", "name", "email"];
     const sortField = validSortFields.includes(sortBy) ? sortBy : "updatedAt";
     const sortDirection =
       queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
+    // Fetch users
     const users = await User.find(query)
       .sort({ [sortField]: sortDirection })
       .skip((page - 1) * limit)
       .limit(limit)
       .select("-password");
 
+    // Count total users
     const totalUsers = await User.countDocuments(query);
 
+    // Response
     return c.json(
       {
         success: true,
@@ -132,9 +139,10 @@ const getUsers = async (c: Context) => {
   }
 };
 
-// Get Me
+// 🔹 Get Me
 const getMe = async (c: Context) => {
   try {
+    // Get user from auth token
     const me = c.get("user");
 
     // Check if user is authenticated
@@ -142,10 +150,12 @@ const getMe = async (c: Context) => {
       return authenticationError(c);
     }
 
+    // Check if avatar is exist
     const singedUrl = me?.avatar;
 
     if (singedUrl) {
       try {
+        // Check if signed URL is valid
         await axios.get(singedUrl, {
           headers: { Range: "bytes=0-0" },
         });
@@ -155,6 +165,8 @@ const getMe = async (c: Context) => {
           (error.response.status === 403 || error.response.status === 404)
         ) {
           const url = new URL(singedUrl);
+
+          // Extract filename
           const filename = url.pathname.substring(
             url.pathname.lastIndexOf("/") + 1
           );
@@ -163,6 +175,7 @@ const getMe = async (c: Context) => {
             `Signed URL expired or invalid. Regenerating for: ${filename}`
           );
 
+          // Generate new signed URL and save
           me.avatar = await generateS3AccessKey({ filename, s3 });
           await me.save();
         } else {
@@ -172,6 +185,7 @@ const getMe = async (c: Context) => {
       }
     }
 
+    // Response
     return c.json(
       {
         success: true,
@@ -192,7 +206,7 @@ const getMe = async (c: Context) => {
   }
 };
 
-// Get Single User
+// 🔹 Get Single User
 const getSingleUser = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -212,6 +226,7 @@ const getSingleUser = async (c: Context) => {
   }
 
   try {
+    // Check if user exists
     const user = await User.findById(idValidation.data.id).select("-password");
 
     if (!user) {
@@ -220,6 +235,7 @@ const getSingleUser = async (c: Context) => {
       });
     }
 
+    // Response
     return c.json(
       {
         success: true,
@@ -240,12 +256,13 @@ const getSingleUser = async (c: Context) => {
   }
 };
 
-// Update User
+// 🔹 Update User
 const updateUser = async (c: Context) => {
   const id = c.req.param("id");
 
   const body = await c.req.json();
 
+  // Validate Body
   const bodySchema = z.object({
     name: z.string().min(3).max(50).optional(),
     email: z.string().email().optional(),
@@ -290,6 +307,7 @@ const updateUser = async (c: Context) => {
   }
 
   try {
+    // Check if user exists
     const user = await User.findById(idValidation.data.id).select("-password");
 
     if (!user) {
@@ -298,6 +316,7 @@ const updateUser = async (c: Context) => {
       });
     }
 
+    // Check if all fields are empty
     if (Object.keys(bodyValidation.data).length === 0) {
       return c.json(
         {
@@ -316,6 +335,7 @@ const updateUser = async (c: Context) => {
     Object.assign(user, bodyValidation.data);
     const docs = await user.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -338,6 +358,7 @@ const updateUser = async (c: Context) => {
 
 // Update profile
 const updateProfile = async (c: Context) => {
+  // Get user from auth token
   const user = c.get("user");
 
   if (!user) {
@@ -360,6 +381,7 @@ const updateProfile = async (c: Context) => {
     address: z.string().max(100).optional(),
   });
 
+  // Validate Body
   const bodyValidation = bodySchema.safeParse(body);
   if (!bodyValidation.success) {
     return badRequestHandler(c, {
@@ -372,6 +394,7 @@ const updateProfile = async (c: Context) => {
   }
 
   try {
+    // Check if all fields are empty
     if (Object.keys(bodyValidation.data).length === 0) {
       return c.json(
         {
@@ -411,10 +434,11 @@ const updateProfile = async (c: Context) => {
   }
 };
 
-// Register User
+// 🔹 Register User
 const registerUser = async (c: Context) => {
   const body = await c.req.json();
 
+  // Validate Body
   const bodySchema = z.object({
     name: z.string().min(3).max(50),
     email: z.string().email(),
@@ -446,6 +470,7 @@ const registerUser = async (c: Context) => {
     });
   }
 
+  // Destructure Body
   const { name, email, phone, address, NID, role } = bodyValidation.data;
 
   // Check if role is super admin
@@ -506,7 +531,6 @@ const registerUser = async (c: Context) => {
         pass: process.env.EMAIL_PASS, // Your email password key
       },
     });
-
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -514,8 +538,10 @@ const registerUser = async (c: Context) => {
       text: `Hello ${name},\n\nYour account has been created successfully. Here are your login details:\n\nEmail: ${email}\nPassword: ${generatedPassword}\n\nPlease log in and change your password immediately for security.\n\nThank you!`,
     };
 
+    // Send Email
     await transporter.sendMail(mailOptions);
 
+    // Response
     return c.json(
       {
         message: "User registered successfully!",
@@ -536,9 +562,10 @@ const registerUser = async (c: Context) => {
   }
 };
 
-// Seed Admin User
+// 🔹 Seed Admin User
 const superAdmin = async (c: Context) => {
   try {
+    // Check if super admin already exists
     const existingSuperAdmin = await User.findOne({ role: "super_admin" });
 
     if (existingSuperAdmin) {
@@ -547,6 +574,7 @@ const superAdmin = async (c: Context) => {
       });
     }
 
+    // Get environment variables
     const name = process.env.ADMIN_NAME;
     const email = process.env.ADMIN_EMAIL;
     const phone = process.env.ADMIN_PHONE;
@@ -569,6 +597,7 @@ const superAdmin = async (c: Context) => {
         .regex(/^\d{10}$|^\d{17}$/, "NID must be either 10 or 17 digits"),
     });
 
+    // Safe Parse for better error handling
     const bodyValidation = bodySchema.safeParse({
       name,
       email,
@@ -587,6 +616,7 @@ const superAdmin = async (c: Context) => {
       });
     }
 
+    // Create Super Admin
     const user = new User({
       name: bodyValidation.data.name,
       email: bodyValidation.data.email,
@@ -596,8 +626,10 @@ const superAdmin = async (c: Context) => {
       role: "super_admin",
     });
 
+    // Save Super Admin
     const docs = await user.save();
 
+    // Response
     return c.json(
       {
         message: "Super Admin created successfully!",
@@ -618,40 +650,42 @@ const superAdmin = async (c: Context) => {
   }
 };
 
-// Login User
+// 🔹 Login User
 const loginUser = async (c: Context) => {
+  const body = await c.req.json();
+
+  // Validate Body
+  const bodyScheme = z
+    .object({
+      email: z.string().email().optional(),
+      phone: z
+        .string()
+        .length(11, "Phone number must be 11 characters long")
+        .optional(),
+      password: z.string().min(8).max(20),
+    })
+    .refine((data) => data.email || data.phone, {
+      message: "Either email or phone is required",
+      path: ["email"], // Can also use "phone" or leave empty
+    });
+
+  // Safe Parse for better error handling
+  const bodyValidation = bodyScheme.safeParse(body);
+
+  if (!bodyValidation.success) {
+    return badRequestHandler(c, {
+      msg: "Validation error",
+      fields: bodyValidation.error.issues.map((issue) => ({
+        name: String(issue.path[0]),
+        message: issue.message,
+      })),
+    });
+  }
+
+  // Destructure Body
+  const { email, phone, password } = bodyValidation.data;
+
   try {
-    const bodyScheme = z
-      .object({
-        email: z.string().email().optional(),
-        phone: z
-          .string()
-          .length(11, "Phone number must be 11 characters long")
-          .optional(),
-        password: z.string().min(8).max(20),
-      })
-      .refine((data) => data.email || data.phone, {
-        message: "Either email or phone is required",
-        path: ["email"], // Can also use "phone" or leave empty
-      });
-
-    const body = await c.req.json();
-
-    // Safe Parse for better error handling
-    const bodyValidation = bodyScheme.safeParse(body);
-
-    if (!bodyValidation.success) {
-      return badRequestHandler(c, {
-        msg: "Validation error",
-        fields: bodyValidation.error.issues.map((issue) => ({
-          name: String(issue.path[0]),
-          message: issue.message,
-        })),
-      });
-    }
-
-    const { email, phone, password } = bodyValidation.data;
-
     // Check if user exists
     const user = await User.findOne({
       $or: [{ email }, { phone }],
@@ -708,6 +742,7 @@ const loginUser = async (c: Context) => {
     user.refresh = refreshToken;
     await user.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -732,9 +767,10 @@ const loginUser = async (c: Context) => {
   }
 };
 
-// Refresh Token
+// 🔹 Refresh Token
 const refreshToken = async (c: Context) => {
   try {
+    // Get refresh token from cookie
     const refreshToken = await getSignedCookie(
       c,
       JWT_REFRESH_SECRET,
@@ -745,20 +781,24 @@ const refreshToken = async (c: Context) => {
       return authenticationError(c);
     }
 
+    // Verify refresh token
     const token = await verify(refreshToken, JWT_REFRESH_SECRET);
 
     if (!token) {
       return authenticationError(c);
     }
 
+    // Check if refresh token is valid
     const user = await User.findOne({ refresh: refreshToken });
 
     if (!user) {
       return authorizationError(c, "Forbidden");
     }
 
+    // Generate new access token
     const accessToken = await generateAccessToken({ user });
 
+    // Response
     return c.json(
       {
         success: true,
@@ -788,7 +828,7 @@ const refreshToken = async (c: Context) => {
   }
 };
 
-// Logout User
+// 🔹 Logout User
 const logout = async (c: Context) => {
   try {
     // Clear cookie using Hono's deleteCookie
@@ -811,12 +851,14 @@ const logout = async (c: Context) => {
       return authenticationError(c, "Invalid refresh token on the cookie");
     }
 
+    // Remove refresh token from database
     const user = await User.updateOne({ _id: payload.id }, { refresh: "" });
 
     if (!user) {
       return authenticationError(c);
     }
 
+    // Response
     return c.json(
       {
         success: true,
@@ -838,6 +880,9 @@ const logout = async (c: Context) => {
 
 // Change Password
 const changePassword = async (c: Context) => {
+  const body = await c.req.json();
+
+  //  Validate Body
   const bodySchema = z
     .object({
       currentPassword: z.string().min(8).max(20),
@@ -849,7 +894,6 @@ const changePassword = async (c: Context) => {
       path: ["confirmPassword"],
     });
 
-  const body = await c.req.json();
 
   // Safe Parse for better error handling
   const bodyValidation = bodySchema.safeParse(body);
@@ -864,9 +908,11 @@ const changePassword = async (c: Context) => {
     });
   }
 
+  // Destructure Body
   const { currentPassword, newPassword } = bodyValidation.data;
 
   try {
+    // Check if user exists. and get email from token
     const { email } = c.get("user");
 
     const user = await User.findOne({ email });
@@ -888,9 +934,11 @@ const changePassword = async (c: Context) => {
       });
     }
 
+    // Update password
     user.password = newPassword;
     await user.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -910,7 +958,7 @@ const changePassword = async (c: Context) => {
   }
 };
 
-// Delete User
+// 🔹 Delete User
 const deleteUser = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -923,6 +971,7 @@ const deleteUser = async (c: Context) => {
   }
 
   try {
+    // Delete user
     const user = await User.findById(idValidation.data.id);
 
     if (!user) {
@@ -931,7 +980,10 @@ const deleteUser = async (c: Context) => {
       });
     }
 
+    // Delete user
     await user.deleteOne();
+
+    // Response
     return c.json(
       {
         success: true,
@@ -951,11 +1003,13 @@ const deleteUser = async (c: Context) => {
   }
 };
 
-// Forgot Password
+// 🔹 Forgot Password
 const forgotPassword = async (c: Context) => {
+  const { email } = await c.req.json();
+
+  // Validate email
   const bodySchema = z.string().email();
 
-  const { email } = await c.req.json();
 
   // Safe Parse for better error handling
   const bodyValidation = bodySchema.safeParse(email);
@@ -975,6 +1029,7 @@ const forgotPassword = async (c: Context) => {
     const user = await User.findOne({
       email: bodyValidation.data,
     });
+
     if (!user) {
       return badRequestHandler(c, {
         msg: "User not found with this email",
@@ -993,6 +1048,7 @@ const forgotPassword = async (c: Context) => {
     // Save the reset token
     await user.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -1013,8 +1069,10 @@ const forgotPassword = async (c: Context) => {
   }
 };
 
-// Reset Password
+// 🔹 Reset Password
 const resetPassword = async (c: Context) => {
+
+  // Validate Body
   const bodySchema = z.object({
     password: z.string().min(8).max(20),
   });
@@ -1034,6 +1092,7 @@ const resetPassword = async (c: Context) => {
   const bodyValidation = bodySchema.safeParse({ password });
   const tokenValidation = tokenSchema.safeParse({ resetToken });
 
+  // Check if body is valid
   if (!bodyValidation.success) {
     return badRequestHandler(c, {
       msg: "Body Validation error",
@@ -1043,6 +1102,8 @@ const resetPassword = async (c: Context) => {
       })),
     });
   }
+
+  // Check if token is valid
   if (!tokenValidation.success) {
     return badRequestHandler(c, {
       msg: "Token Validation error",
@@ -1054,6 +1115,7 @@ const resetPassword = async (c: Context) => {
   }
 
   try {
+    // Find the user
     const user = await User.findOne({
       resetPasswordToken: tokenValidation.data.resetToken,
       resetPasswordExpireDate: { $gt: Date.now() }, // Must be greater than the current time
@@ -1065,14 +1127,17 @@ const resetPassword = async (c: Context) => {
       });
     }
 
+    // Update password
     user.password = bodyValidation.data.password;
 
     // Clear reset fields
     user.resetPasswordToken = null;
     user.resetPasswordExpireDate = null;
 
+    // Save
     await user.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -1092,10 +1157,11 @@ const resetPassword = async (c: Context) => {
   }
 };
 
-// Change Avatar
+// 🔹 Change Avatar
 const changeAvatar = async (c: Context) => {
   const body = await c.req.parseBody();
 
+  // Validate Body
   const avatarSchema = z.object({
     avatar: z
       .instanceof(File, { message: "Invalid file format" })
@@ -1114,11 +1180,13 @@ const changeAvatar = async (c: Context) => {
     });
   }
 
+  // Get file from body
   const file = body["avatar"] as File;
   if (!file) {
     return badRequestHandler(c, { msg: "No file provided" });
   }
 
+  // Safe Parse for better error handling
   const fileValidation = avatarSchema.safeParse({ avatar: file });
   if (!fileValidation.success) {
     return badRequestHandler(c, {
@@ -1132,15 +1200,18 @@ const changeAvatar = async (c: Context) => {
     });
   }
 
+  // Get user from auth token
   const user = c.get("user");
   if (!user) {
     return authenticationError(c);
   }
 
+  // Generate filename
   const fileN = c.req.query("filename") || "avatar";
   const filename = `${fileN}-${Date.now()}.jpeg`;
 
   try {
+    // Upload to S3
     uploadAvatar({
       s3,
       file,
@@ -1150,13 +1221,16 @@ const changeAvatar = async (c: Context) => {
       bucketName: AWS_BUCKET_NAME,
     });
 
+    // Generate signed URL
     const url = await generateS3AccessKey({ filename, s3 });
 
+    // Update user with avatar
     user.avatar = url;
     await user.save();
 
+    // Response
     return c.json(
-      { success: true, message: "Avatar updated successfully" },
+      { success: true, message: "Avatar updated successfully", data: url },
       200
     );
   } catch (error: any) {

@@ -1,3 +1,4 @@
+// 🔹 Default values
 const defaults: {
   page: number;
   limit: number;

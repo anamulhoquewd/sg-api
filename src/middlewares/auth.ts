@@ -9,7 +9,7 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-// Check if user is authenticated
+// 🔹 Check if user is authenticated
 export const protect = async (c: Context, next: Next) => {
   const token = c.req.header("Authorization")?.replace("Bearer ", "");
 
@@ -30,7 +30,7 @@ export const protect = async (c: Context, next: Next) => {
   }
 };
 
-// Check if this user is admin or not
+// 🔹 Check if this user is admin or not
 export const authorize =
   (roles: Array<"admin" | "manager" | "super_admin"> = ["super_admin"]) =>
   async (c: Context, next: Next) => {

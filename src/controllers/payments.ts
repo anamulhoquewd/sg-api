@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 import { badRequestHandler } from "../middlewares";
 import idSchema from "./utils";
 
-// Get all payments
+// 🔹 Get all payments
 const getPayments = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
@@ -69,6 +69,7 @@ const getPayments = async (c: Context) => {
     // Count total payments
     const totalPayments: number = await Payment.countDocuments(query);
 
+    // Response
     return c.json(
       {
         success: true,
@@ -90,7 +91,7 @@ const getPayments = async (c: Context) => {
   }
 };
 
-// Get single payment
+// 🔹 Get single payment
 const getSinglePayment = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -103,6 +104,7 @@ const getSinglePayment = async (c: Context) => {
   }
 
   try {
+    // Check if payment exists
     const payment = await Payment.findById(id);
 
     if (!payment) {
@@ -111,6 +113,7 @@ const getSinglePayment = async (c: Context) => {
       });
     }
 
+    // Response
     return c.json({
       success: true,
       message: "Payment fetched successfully",
@@ -128,10 +131,11 @@ const getSinglePayment = async (c: Context) => {
   }
 };
 
-// Register payment
+// 🔹 Register payment
 const registerPayment = async (c: Context) => {
   const body = await c.req.json();
 
+  // Validate the data
   const bodySchema = z
     .object({
       customerId: z
@@ -224,6 +228,7 @@ const registerPayment = async (c: Context) => {
     });
   }
 
+  // Destructure the data
   const {
     customerId,
     amount,
@@ -237,6 +242,7 @@ const registerPayment = async (c: Context) => {
   } = bodyValidation.data;
 
   try {
+    // Check if customer exists
     const customer = await Customer.findById(customerId);
 
     if (!customer) {
@@ -301,6 +307,7 @@ const registerPayment = async (c: Context) => {
     // Save changes
     await customer.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -321,7 +328,7 @@ const registerPayment = async (c: Context) => {
   }
 };
 
-// Update payment
+// 🔹 Update payment
 const updatePayment = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -335,6 +342,7 @@ const updatePayment = async (c: Context) => {
 
   const body = await c.req.json();
 
+  // Validate the data
   const bodySchema = z
     .object({
       amount: z
@@ -366,6 +374,7 @@ const updatePayment = async (c: Context) => {
   }
 
   try {
+    // Check if payment exists
     const payment = await Payment.findById(idValidation.data.id);
 
     if (!payment) {
@@ -374,6 +383,7 @@ const updatePayment = async (c: Context) => {
       });
     }
 
+    // Check if no updates are provided
     if (Object.keys(idValidation.data.id).length === 0) {
       return c.json(
         {
@@ -421,6 +431,7 @@ const updatePayment = async (c: Context) => {
       await customer.save();
     }
 
+    // Response
     return c.json(
       {
         success: true,
@@ -441,7 +452,7 @@ const updatePayment = async (c: Context) => {
   }
 };
 
-// Delete payment
+// 🔹 Delete payment
 const deletePayment = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -489,6 +500,7 @@ const deletePayment = async (c: Context) => {
       await customer.save();
     }
 
+    // Response
     return c.json(
       {
         success: true,

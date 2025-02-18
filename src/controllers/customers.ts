@@ -8,7 +8,7 @@ import { badRequestHandler, conflictHandler } from "../middlewares";
 import mongoose from "mongoose";
 import idSchema from "./utils";
 
-// Get All customers
+// 🔹 🔹 Get All customers
 const getCustomers = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
@@ -84,8 +84,8 @@ const getCustomers = async (c: Context) => {
   }
 };
 
-// Send message to the customer
-// @TODO: Orders and paid amount should be sent from the backend.
+// 🔹 🔹 Send message to the customer
+// 🔹 @TODO: Orders and paid amount should be sent from the backend.
 const sendNotification = async (c: Context) => {
   const body = await c.req.json();
 
@@ -175,7 +175,7 @@ const sendNotification = async (c: Context) => {
   }
 };
 
-// Create Customer
+// 🔹 Create Customer
 const registerCustomer = async (c: Context) => {
   const body = await c.req.json();
 
@@ -208,6 +208,7 @@ const registerCustomer = async (c: Context) => {
       }
     );
 
+  // Validate the data
   const bodyValidation = bodySchema.safeParse(body);
   if (!bodyValidation.success) {
     return badRequestHandler(c, {
@@ -264,6 +265,7 @@ const registerCustomer = async (c: Context) => {
     // Save customer
     const docs = await customer.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -285,7 +287,7 @@ const registerCustomer = async (c: Context) => {
   }
 };
 
-// Get Single Customer
+// 🔹 Get Single Customer
 const getSingleCustomer = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -298,6 +300,7 @@ const getSingleCustomer = async (c: Context) => {
   }
 
   try {
+    // Check if customer exists
     const customer = await Customer.findById(idValidation.data.id);
 
     if (!customer) {
@@ -306,6 +309,7 @@ const getSingleCustomer = async (c: Context) => {
       });
     }
 
+    // Response
     return c.json(
       {
         success: true,
@@ -326,7 +330,7 @@ const getSingleCustomer = async (c: Context) => {
   }
 };
 
-// Update Customer
+// 🔹 Update Customer
 const updateCustomer = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -372,6 +376,7 @@ const updateCustomer = async (c: Context) => {
       }
     );
 
+  // Validate the data
   const bodyValidation = bodySchema.safeParse(body);
   if (!bodyValidation.success) {
     return badRequestHandler(c, {
@@ -384,6 +389,7 @@ const updateCustomer = async (c: Context) => {
   }
 
   try {
+    // Check if customer exists
     const customer = await Customer.findById(idValidation.data.id);
 
     if (!customer) {
@@ -392,6 +398,7 @@ const updateCustomer = async (c: Context) => {
       });
     }
 
+    // Check if any field is provided
     if (Object.keys(bodyValidation.data).length === 0) {
       return c.json(
         {
@@ -410,6 +417,7 @@ const updateCustomer = async (c: Context) => {
     Object.assign(customer, bodyValidation.data);
     const docs = await customer.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -430,7 +438,7 @@ const updateCustomer = async (c: Context) => {
   }
 };
 
-// Delete Customer
+// 🔹 Delete Customer
 const deleteCustomer = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -443,6 +451,7 @@ const deleteCustomer = async (c: Context) => {
   }
 
   try {
+    // Check if customer exists
     const customer = await Customer.findById(idValidation.data.id);
     if (!customer) {
       return badRequestHandler(c, {
@@ -450,8 +459,10 @@ const deleteCustomer = async (c: Context) => {
       });
     }
 
+    // Delete customer
     await customer.deleteOne();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -471,7 +482,7 @@ const deleteCustomer = async (c: Context) => {
   }
 };
 
-// Regenerate Access Key
+// 🔹 Regenerate Access Key
 const regenerateAccessKey = async (c: Context) => {
   const id = c.req.query("id");
 
@@ -484,9 +495,9 @@ const regenerateAccessKey = async (c: Context) => {
   }
 
   try {
+    // Check if customer exists
     const customer = await Customer.findById(idValidation.data.id);
 
-    // Check if customer exists
     if (!customer) {
       return badRequestHandler(c, {
         msg: "Customer not found with the provided ID/Key",
@@ -495,8 +506,11 @@ const regenerateAccessKey = async (c: Context) => {
 
     // Generate and hash access key. and save finally
     const reGenerateAccessKey = customer.generateAccessKey();
+
+    // Update customer
     await customer.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -517,16 +531,17 @@ const regenerateAccessKey = async (c: Context) => {
   }
 };
 
-// Customer access their own account with access key
+// 🔹 Customer access their own account with access key
 const customerAccess = async (c: Context) => {
-  const pPage = parseInt(c.req.query("pPage") as string, 10) || defaults.page; // p for payments
-  const oPage = parseInt(c.req.query("oPage") as string, 10) || defaults.page; // o for orders
+  const pPage = parseInt(c.req.query("pPage") as string, 10) || defaults.page; // 🔹 p for payments
+  const oPage = parseInt(c.req.query("oPage") as string, 10) || defaults.page; // 🔹 o for orders
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
   const fromDate = c.req.query("fromDate") || null;
   const toDate = c.req.query("toDate") || null;
 
+  // Access key
   const key = c.req.query("key");
 
   // Validate key
@@ -536,6 +551,7 @@ const customerAccess = async (c: Context) => {
     }),
   });
 
+  // Validate access key
   const keyValidation = keySchema.safeParse({ key });
   if (!keyValidation.success) {
     console.log(keyValidation.error);
@@ -548,6 +564,7 @@ const customerAccess = async (c: Context) => {
     });
   }
 
+  // Validate query
   const querySchema = z.object({
     sortBy: z.string().optional().default(defaults.sortBy),
     sortType: z
@@ -575,7 +592,7 @@ const customerAccess = async (c: Context) => {
     // Check if access key is valid
     const customer = await Customer.findOne({
       accessKey: keyValidation.data.key,
-      accessKeyExpiredAt: { $gt: Date.now() }, // Must be greater than the current time
+      accessKeyExpiredAt: { $gt: Date.now() }, // 🔹 Must be greater than the current time
     });
 
     // Check if customer exists
@@ -603,13 +620,13 @@ const customerAccess = async (c: Context) => {
     // Query for orders
     const orderQuery = {
       customerId: customer._id,
-      ...(fromDate && toDate ? { date: dateFilter } : {}), // sort by date range
+      ...(fromDate && toDate ? { date: dateFilter } : {}), // 🔹 sort by date range
     };
 
     // Query for payments
     const paymentQuery = {
       customerId: customer._id,
-      ...(fromDate && toDate ? { updatedAt: dateFilter } : {}), // sort by date range
+      ...(fromDate && toDate ? { updatedAt: dateFilter } : {}), // 🔹 sort by date range
     };
 
     // Get orders
@@ -633,6 +650,7 @@ const customerAccess = async (c: Context) => {
     // Calculate total payment pages
     const totalPaymentPages = Math.ceil(totalPayments / limit);
 
+    // Response
     return c.json(
       {
         success: true,

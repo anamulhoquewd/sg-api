@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 import { badRequestHandler, conflictHandler } from "../middlewares";
 import idSchema from "./utils";
 
-// Get all orders
+// 🔹Get all orders
 const getOrders = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
@@ -54,12 +54,14 @@ const getOrders = async (c: Context) => {
   }
 
   try {
+    // Date filter
     const dateFilter: any = {};
     if (queryValidation.data.fromDate && queryValidation.data.toDate) {
       dateFilter.$gte = new Date(queryValidation.data.fromDate);
       dateFilter.$lte = new Date(queryValidation.data.toDate);
     }
 
+    // Query
     const query = {
       $or: [
         { customerName: { $regex: search, $options: "i" } },
@@ -73,6 +75,7 @@ const getOrders = async (c: Context) => {
         : {}), // sort by customer ID for specific customer's orders
     };
 
+    // Allowable sort fields
     const validSortFields = ["createdAt", "updatedAt", "name"];
 
     const sortField = validSortFields.includes(queryValidation.data.sortBy)
@@ -81,13 +84,16 @@ const getOrders = async (c: Context) => {
     const sortDirection =
       queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
+    // Get orders
     const orders = await Order.find(query)
       .sort({ [sortField]: sortDirection })
       .skip((page - 1) * limit)
       .limit(limit);
 
+    // Get total orders
     const totalOrders = await Order.countDocuments(query);
 
+    // Response
     return c.json(
       {
         success: true,
@@ -111,7 +117,7 @@ const getOrders = async (c: Context) => {
   }
 };
 
-// Create order
+// 🔹 Create order
 const registerOrder = async (c: Context) => {
   const body = await c.req.json();
 
@@ -174,6 +180,7 @@ const registerOrder = async (c: Context) => {
   const { customerId, price, quantity, item, date, note } = bodyValidation.data;
 
   try {
+    // Get customer
     const customer = await Customer.findById(customerId);
 
     // Check if customer exists
@@ -223,6 +230,7 @@ const registerOrder = async (c: Context) => {
     customer.amount += totalAmount;
     await customer.save();
 
+    // Response
     return c.json(
       {
         success: true,
@@ -243,7 +251,7 @@ const registerOrder = async (c: Context) => {
   }
 };
 
-// Get single order
+// 🔹 Get single order
 const getSingleOrder = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -256,6 +264,7 @@ const getSingleOrder = async (c: Context) => {
   }
 
   try {
+    // Check if order exists
     const order = await Order.findById(idValidation.data.id);
 
     if (!order) {
@@ -264,6 +273,7 @@ const getSingleOrder = async (c: Context) => {
       });
     }
 
+    // Response
     return c.json(
       {
         success: true,
@@ -284,7 +294,7 @@ const getSingleOrder = async (c: Context) => {
   }
 };
 
-// Update order
+// 🔹 Update order
 const updateOrder = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -319,6 +329,7 @@ const updateOrder = async (c: Context) => {
   }
 
   try {
+    // Check if order exists
     const order = await Order.findById(idValidation.data.id);
 
     if (!order) {
@@ -327,6 +338,7 @@ const updateOrder = async (c: Context) => {
       });
     }
 
+    // Check if data is provided
     if (Object.keys(bodyValidation.data).length === 0) {
       return c.json(
         {
@@ -360,6 +372,7 @@ const updateOrder = async (c: Context) => {
       await customer.save();
     }
 
+    // Response
     return c.json(
       {
         success: true,
@@ -380,7 +393,7 @@ const updateOrder = async (c: Context) => {
   }
 };
 
-// Delete order
+// 🔹 Delete order
 const deleteOrder = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -401,6 +414,7 @@ const deleteOrder = async (c: Context) => {
       });
     }
 
+    // Delete order
     await order.deleteOne();
 
     // Update customer amount
@@ -410,6 +424,7 @@ const deleteOrder = async (c: Context) => {
       await customer.save();
     }
 
+    // Response
     return c.json(
       {
         success: true,

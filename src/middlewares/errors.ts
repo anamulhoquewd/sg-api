@@ -1,19 +1,6 @@
 import type { Context } from "hono";
 
-// Global Error Handler
-export const errorHandler = (err: Error, c: Context) => {
-  console.error(err);
-  return c.json(
-    {
-      success: false,
-      message: err.message,
-      stack: process.env.NODE_ENV === "production" ? null : err.stack,
-    },
-    500
-  );
-};
-
-// Bad Request Handler
+// 🔹 Bad Request Handler
 export const badRequestHandler = (
   c: Context,
   {
@@ -34,7 +21,7 @@ export const badRequestHandler = (
   );
 };
 
-// Conflict Error Handler
+// 🔹 Conflict Error Handler
 export const conflictHandler = (
   c: Context,
   {
@@ -55,7 +42,7 @@ export const conflictHandler = (
   );
 };
 
-// Not Found Handler
+// 🔹 Not Found Handler
 export const notFound = (c: Context) => {
   return c.json(
     {
@@ -66,7 +53,7 @@ export const notFound = (c: Context) => {
   );
 };
 
-// Authentication Error Handler
+// 🔹 Authentication Error Handler
 export const authenticationError = (
   c: Context,
   msg = "Authentication Failed"
@@ -83,7 +70,7 @@ export const authenticationError = (
   );
 };
 
-// Authorization Error Handler
+// 🔹 Authorization Error Handler
 export const authorizationError = (c: Context, msg = "Permission Denied") => {
   return c.json(
     {
