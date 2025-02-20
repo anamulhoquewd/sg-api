@@ -29,7 +29,7 @@ const userSchemaZod = z.object({
 });
 
 // 🔹 Mongoose Schema
-interface IUser extends z.infer<typeof userSchemaZod> {}
+export interface IUser extends z.infer<typeof userSchemaZod> {}
 
 // 🔹 Mongoose Document
 export interface IUserDoc extends IUser, Document {

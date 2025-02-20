@@ -1,5 +1,17 @@
 import type { Context } from "hono";
 
+// 🔹 Server Error Handler
+export const serverErrorHandler = (c: Context, error: any) => {
+  return c.json(
+    {
+      success: false,
+      message: error.message,
+      stack: process.env.NODE_ENV === "production" ? null : error.stack,
+    },
+    500
+  );
+};
+
 // 🔹 Bad Request Handler
 export const badRequestHandler = (
   c: Context,

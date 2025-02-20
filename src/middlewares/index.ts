@@ -4,6 +4,7 @@ import {
   conflictHandler,
   authenticationError,
   authorizationError,
+  serverErrorHandler,
 } from "./errors";
 import { protect, authorize } from "./auth";
 
@@ -14,5 +15,6 @@ export {
   badRequestHandler,
   conflictHandler,
   authenticationError,
+  serverErrorHandler,
   authorizationError,
 };

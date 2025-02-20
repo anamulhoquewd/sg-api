@@ -19,7 +19,7 @@ export const protect = async (c: Context, next: Next) => {
 
   try {
     const { id } = await verify(token, JWT_SECRET);
-    const user = await User.findById(id).select("-password");
+    const user = await User.findById(id).select("-password -refresh");
     if (!user) {
       return authenticationError(c);
     }
