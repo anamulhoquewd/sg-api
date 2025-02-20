@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET as string;
 
 // 🔹 Check if user is authenticated
 export const protect = async (c: Context, next: Next) => {
@@ -18,11 +18,14 @@ export const protect = async (c: Context, next: Next) => {
   }
 
   try {
-    const { id } = await verify(token, JWT_SECRET);
+    const { id } = await verify(token, JWT_ACCESS_SECRET);
+
     const user = await User.findById(id).select("-password -refresh");
+
     if (!user) {
       return authenticationError(c);
     }
+
     c.set("user", user);
     return next();
   } catch (error) {

@@ -9,7 +9,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const JWT_SECRET = (process.env.JWT_SECRET as string) || "access";
+const JWT_ACCESS_SECRET = (process.env.JWT_ACCESS_SECRET as string) || "access";
 const JWT_REFRESH_SECRET =
   (process.env.JWT_REFRESH_SECRET as string) || "refresh";
 
@@ -87,7 +87,7 @@ const generateAccessToken = async ({
       exp: Math.floor(Date.now() / 1000) + 60 * (expMinutes + 55),
       // exp: Math.floor(Date.now() / 1000) + 60,
     },
-    JWT_SECRET
+    JWT_ACCESS_SECRET
   );
 
   if (!token) {

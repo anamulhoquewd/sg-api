@@ -1,12 +1,9 @@
 import { Context } from "hono";
-import { Customer, } from "../models";
+import { Customer } from "../models";
 import { defaults } from "../config/defaults";
 import twilio from "twilio";
 import { z } from "zod";
-import {
-  badRequestHandler,
-  serverErrorHandler,
-} from "../middlewares";
+import { badRequestHandler, serverErrorHandler } from "../middlewares";
 import mongoose from "mongoose";
 import {
   deleteCustomerService,
@@ -25,6 +22,7 @@ const getCustomers = async (c: Context) => {
   const search = c.req.query("search") || defaults.search;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
+  const active = c.req.query("active") === "false" ? false : true;
 
   const response = await getCustomersService({
     page,
@@ -32,6 +30,7 @@ const getCustomers = async (c: Context) => {
     sortType,
     sortBy,
     search,
+    active,
   });
 
   if (response.error) {
@@ -142,12 +141,12 @@ const registerCustomer = async (c: Context) => {
 
   const response = await registerCustomerService(body);
 
-  if (response.serverError) {
-    return serverErrorHandler(c, response.serverError);
-  }
-
   if (response.error) {
     return badRequestHandler(c, response.error);
+  }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
   }
 
   return c.json(response.success, 201);

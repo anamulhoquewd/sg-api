@@ -15,39 +15,8 @@ interface ICustomer {
   defaultQuantity: number;
   paymentSystem: "weekly" | "monthly";
   defaultOffDays: [string];
+  active: boolean;
 }
-
-//  Validate the data
-const customerSchemaZod = z
-  .object({
-    name: z.string().min(3).max(50).optional(),
-    phone: z
-      .string()
-      .regex(
-        /^01\d{9}$/,
-        "Phone number must start with 01 and be exactly 11 digits"
-      )
-      .optional(),
-    address: z.string().max(100).optional(),
-    defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"]).optional(),
-    defaultPrice: z.number().optional(),
-    defaultQuantity: z.number().optional(),
-    paymentSystem: z.enum(["weekly", "monthly"]).optional(),
-    defaultOffDays: z
-      .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
-      .nonempty(),
-  })
-  .refine(
-    (data) =>
-      data.defaultOffDays?.every((day) =>
-        ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
-      ) ?? true,
-    {
-      message:
-        "Default off days must be in the following order: sa, su, mo, tu, we, th, fr",
-      path: ["defaultOffDays"],
-    }
-  );
 
 export const getCustomersService = async (queryParams: {
   page: number;
@@ -55,8 +24,9 @@ export const getCustomersService = async (queryParams: {
   search: string;
   sortType: string;
   sortBy: string;
+  active: boolean;
 }) => {
-  const { sortBy, sortType, page, limit, search } = queryParams;
+  const { sortBy, sortType, page, limit, search, active } = queryParams;
   const querySchema = z.object({
     sortBy: z
       .enum(["createdAt", "updatedAt", "name"])
@@ -66,11 +36,13 @@ export const getCustomersService = async (queryParams: {
       .enum(["asc", "desc"])
       .optional()
       .default(defaults.sortType as "asc" | "desc"),
+    active: z.boolean().optional(),
   });
 
   const queryValidation = querySchema.safeParse({
     sortBy,
     sortType,
+    active,
   });
 
   if (!queryValidation.success) {
@@ -82,7 +54,9 @@ export const getCustomersService = async (queryParams: {
     };
   }
 
-  const query: any = {};
+  const query: any = {
+    active,
+  };
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: "i" } },
@@ -132,6 +106,38 @@ export const getCustomersService = async (queryParams: {
 };
 
 export const registerCustomerService = async (body: ICustomer) => {
+  //  Validate the data
+  const customerSchemaZod = z
+    .object({
+      name: z.string().min(3).max(50),
+      phone: z
+        .string()
+        .regex(
+          /^01\d{9}$/,
+          "Phone number must start with 01 and be exactly 11 digits"
+        ),
+      address: z.string().max(100),
+      defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"]),
+      defaultPrice: z.number(),
+      defaultQuantity: z.number(),
+      paymentSystem: z.enum(["weekly", "monthly"]),
+      active: z.boolean().default(true),
+      defaultOffDays: z
+        .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
+        .nonempty(),
+    })
+    .refine(
+      (data) =>
+        data.defaultOffDays?.every((day: string) =>
+          ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
+        ) ?? true,
+      {
+        message:
+          "Default off days must be in the following order: sa, su, mo, tu, we, th, fr",
+        path: ["defaultOffDays"],
+      }
+    );
+
   // Validate the data
   const bodyValidation = customerSchemaZod.safeParse(body);
   if (!bodyValidation.success) {
@@ -152,6 +158,7 @@ export const registerCustomerService = async (body: ICustomer) => {
     defaultQuantity,
     paymentSystem,
     defaultOffDays,
+    active,
   } = bodyValidation.data;
 
   try {
@@ -182,6 +189,7 @@ export const registerCustomerService = async (body: ICustomer) => {
       defaultQuantity,
       paymentSystem,
       defaultOffDays,
+      active,
     });
 
     // Generate and hash access key
@@ -214,7 +222,9 @@ export const getSingleCustomerService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return {
+      error: schemaValidationError(idValidation.error, "Invalid ID"),
+    };
   }
 
   try {
@@ -255,10 +265,46 @@ export const updateCustomerService = async ({
   id: string;
   body: ICustomer;
 }) => {
+  //  Validate the data
+  const customerSchemaZod = z
+    .object({
+      name: z.string().min(3).max(50).optional(),
+      phone: z
+        .string()
+        .regex(
+          /^01\d{9}$/,
+          "Phone number must start with 01 and be exactly 11 digits"
+        )
+        .optional(),
+      address: z.string().max(100).optional(),
+      defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"]).optional(),
+      defaultPrice: z.number().optional(),
+      defaultQuantity: z.number().optional(),
+      paymentSystem: z.enum(["weekly", "monthly"]).optional(),
+      active: z.boolean().optional(),
+      defaultOffDays: z
+        .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
+        .nonempty()
+        .optional(),
+    })
+    .refine(
+      (data) =>
+        data.defaultOffDays?.every((day: string) =>
+          ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
+        ) ?? true,
+      {
+        message:
+          "Default off days must be in the following order: sa, su, mo, tu, we, th, fr",
+        path: ["defaultOffDays"],
+      }
+    );
+
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return {
+      error: schemaValidationError(idValidation.error, "Invalid ID"),
+    };
   }
 
   // Validate the data
@@ -322,7 +368,9 @@ export const deleteCustomerService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return {
+      error: schemaValidationError(idValidation.error, "Invalid ID"),
+    };
   }
 
   try {
@@ -361,7 +409,9 @@ export const regenerateAccessKeyService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return {
+      error: schemaValidationError(idValidation.error, "Invalid ID"),
+    };
   }
 
   try {

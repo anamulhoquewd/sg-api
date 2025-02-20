@@ -5,7 +5,7 @@ import { connectDB } from "./config/db";
 import { cors } from "hono/cors";
 import { prettyJSON } from "hono/pretty-json";
 import { logger } from "hono/logger";
-import {  notFound, protect } from "./middlewares";
+import { notFound, protect } from "./middlewares";
 import { users, customers, orders, payments } from "./routes";
 import { user } from "./controllers";
 
@@ -20,7 +20,12 @@ connectDB();
 app.use("*", logger(), prettyJSON());
 
 // 🔹 Cors
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  })
+);
 
 // 🔹 Health check
 app.get("/health", (c) => {
@@ -44,7 +49,7 @@ app.get("/auth/me", protect, (c) => user.getMe(c));
 
 // 🔹 Global Error Handler
 app.onError((error: any, c) => {
-  console.error(error);
+  console.error("error: ", error);
   return c.json(
     {
       success: false,

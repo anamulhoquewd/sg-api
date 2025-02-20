@@ -25,13 +25,27 @@ const customerSchemaZod = z.object({
   amount: z.number().default(0),
   accessKey: z.string().optional(),
   accessKeyExpiredAt: z.date().optional(),
+  active: z.boolean().default(true),
 });
 
 // 🔹 Mongoose Schema
 interface ICustomer extends z.infer<typeof customerSchemaZod> {}
 
 // 🔹 Mongoose Document
-interface ICustomerDoc extends ICustomer, Document {
+interface ICustomerDoc extends Document {
+  name: string;
+  phone: string;
+  address: string;
+  defaultItem: string;
+  defaultPrice: number;
+  defaultQuantity: number;
+  defaultOffDays: string[];
+  paymentStatus: string;
+  paymentSystem: string;
+  amount: number;
+  accessKey?: string;
+  accessKeyExpiredAt?: Date;
+  active: boolean;
   generateAccessKey: (minutes?: number) => string;
 }
 
@@ -67,6 +81,7 @@ const customerSchema = new Schema<ICustomerDoc>(
     amount: { type: Number, default: 0 },
     accessKey: { type: String },
     accessKeyExpiredAt: { type: Date },
+    active: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

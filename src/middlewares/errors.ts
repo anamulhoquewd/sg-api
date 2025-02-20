@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 // 🔹 Server Error Handler
 export const serverErrorHandler = (c: Context, error: any) => {
+  console.error("Error: ", error);
   return c.json(
     {
       success: false,

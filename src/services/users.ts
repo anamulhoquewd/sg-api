@@ -50,8 +50,9 @@ export const getUsersService = async (queryParams: {
   sortBy: string;
   sortType: string;
   role: string;
+  active: boolean;
 }) => {
-  const { page, limit, search, sortBy, sortType, role } = queryParams;
+  const { page, limit, search, sortBy, sortType, role, active } = queryParams;
 
   // Validate query parameters
   const querySchema = z.object({
@@ -61,6 +62,7 @@ export const getUsersService = async (queryParams: {
       .optional()
       .default(defaults.sortType as "asc" | "desc"),
     role: z.enum(["admin", "manager", "super_admin", ""]).optional(),
+    active: z.boolean().optional(),
   });
 
   // Safe Parse for better error handling
@@ -68,6 +70,7 @@ export const getUsersService = async (queryParams: {
     sortBy,
     sortType,
     role,
+    active,
   });
 
   // Return error if validation fails
@@ -82,7 +85,9 @@ export const getUsersService = async (queryParams: {
 
   try {
     // Build query
-    const query: any = {};
+    const query: any = {
+      active,
+    };
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -144,6 +149,7 @@ export const registerUserService = async (body: {
   address: string;
   NID: string;
   role: "admin" | "manager";
+  active: boolean;
 }) => {
   // Validate Body
   const bodySchema = z.object({
@@ -162,6 +168,7 @@ export const registerUserService = async (body: {
       .string()
       .regex(/^\d{10}$|^\d{17}$/, "NID must be either 10 or 17 digits"),
     role: z.enum(["admin", "manager", "super_admin"]),
+    active: z.boolean().default(true),
   });
 
   // Safe Parse for better error handling
@@ -177,7 +184,8 @@ export const registerUserService = async (body: {
   }
 
   // Destructure Body
-  const { name, email, phone, address, NID, role } = bodyValidation.data;
+  const { name, email, phone, address, NID, role, active } =
+    bodyValidation.data;
 
   // Check if role is super admin
   if (role === "super_admin") {
@@ -231,6 +239,7 @@ export const registerUserService = async (body: {
       address,
       NID,
       role,
+      active,
     });
 
     // Save User
@@ -269,7 +278,7 @@ export const getSingleUserService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   try {
@@ -308,6 +317,7 @@ export const updateUserService = async ({
 }: {
   id: string;
   body: {
+    active: boolean;
     name: string;
     email: string;
     phone: string;
@@ -342,13 +352,14 @@ export const updateUserService = async ({
       .enum(["pending", "paid", "partially_paid", "on_hold", "rejected"])
       .optional(),
     role: z.enum(["admin", "manager", "super_admin"]).optional(),
+    active: z.boolean().optional(),
   });
 
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
     console.log(idValidation.error);
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   // Validate Body
@@ -414,7 +425,13 @@ export const updateProfileService = async ({
   body,
 }: {
   user: any;
-  body: { name: string; email: string; phone: string; address: string };
+  body: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    active: boolean;
+  };
 }) => {
   // Validate Body
   const bodySchema = z.object({
@@ -428,6 +445,7 @@ export const updateProfileService = async ({
       )
       .optional(),
     address: z.string().max(100).optional(),
+    active: z.boolean().optional(),
   });
 
   // Validate Body
@@ -737,7 +755,7 @@ export const deleteUserService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   try {

@@ -67,7 +67,7 @@ const registerPayment = async (c: Context) => {
     return serverErrorHandler(c, response.serverError);
   }
 
-  c.json(response.success, 201);
+  return c.json(response.success, 201);
 };
 
 // 🔹 Update payment

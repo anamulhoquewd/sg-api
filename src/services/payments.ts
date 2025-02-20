@@ -96,7 +96,7 @@ export const getSinglePaymentService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   try {
@@ -140,7 +140,7 @@ export const updatePaymentService = async ({
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   // Validate the data
@@ -455,7 +455,7 @@ export const deletePaymentService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return schemaValidationError(idValidation.error, "Invalid ID");
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   try {
