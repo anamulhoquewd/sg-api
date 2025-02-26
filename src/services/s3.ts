@@ -1,4 +1,3 @@
-import axios from "axios";
 import { s3 } from "./../config/S3";
 import { generateS3AccessKey } from "../lib";
 

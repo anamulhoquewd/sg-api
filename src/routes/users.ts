@@ -5,9 +5,7 @@ import { authorize, protect } from "../middlewares";
 const users = new Hono();
 
 // 🔹 Get All Users
-users.get("/", protect, authorize(["admin", "manager"]), (c) =>
-  user.getUsers(c)
-);
+users.get("/", protect, (c) => user.getUsers(c));
 
 // 🔹 Create User (Only super admin)
 users.post("/auth/register", protect, authorize(), (c) => user.registerUser(c));
@@ -39,9 +37,7 @@ users.post("/auth/forgot-password", (c) => user.forgotPassword(c));
 users.put("/auth/reset-password/:resetToken", (c) => user.resetPassword(c));
 
 // 🔹 Get Single User (Private)
-users.get("/:id", protect, authorize(["admin", "manager"]), (c) =>
-  user.getSingleUser(c)
-);
+users.get("/:id", protect, (c) => user.getSingleUser(c));
 
 // 🔹 Update User (Only Super Admin)
 users.put("/:id", protect, authorize(), (c) => user.updateUser(c));

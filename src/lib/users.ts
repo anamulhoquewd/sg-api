@@ -5,9 +5,9 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { sign } from "hono/jwt";
-import dotenv from "dotenv";
+import { config } from "dotenv";
 
-dotenv.config();
+config();
 
 const JWT_ACCESS_SECRET = (process.env.JWT_ACCESS_SECRET as string) || "access";
 const JWT_REFRESH_SECRET =

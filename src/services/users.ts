@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { stringGenerator } from "../../utils";
+import { stringGenerator } from "../utils";
 import { User } from "../models";
 import nodemailer from "nodemailer";
 import { defaults } from "../config/defaults";
@@ -33,6 +33,11 @@ const AWS_ACCESS_KEY_ID =
   (process.env.AWS_ACCESS_KEY_ID as string) || "12345678";
 const AWS_SECRET_ACCESS_KEY =
   (process.env.AWS_SECRET_ACCESS_KEY as string) || "12345678";
+
+// Get environment variables
+const PROTOCOL = process.env.PROTOCOL;
+const HOST = process.env.HOST;
+const BASE_URL = process.env.BASE_URL;
 
 // Create Email Transporter config
 const transporter = nodemailer.createTransport({
@@ -657,7 +662,7 @@ export const loginService = async (body: {
     return {
       success: {
         success: true,
-        message: "Login successful",
+        message: "Login successfully!",
         tokens: {
           accessToken,
           refreshToken,
@@ -770,6 +775,14 @@ export const deleteUserService = async (id: string) => {
       };
     }
 
+    if (user.role === "super_admin") {
+      return {
+        error: {
+          msg: "Super admin cannot be deleted",
+        },
+      };
+    }
+
     // Delete user
     await user.deleteOne();
 
@@ -793,10 +806,12 @@ export const deleteUserService = async (id: string) => {
 
 export const forgotPasswordService = async (email: string) => {
   // Validate email
-  const bodySchema = z.string().email();
+  const bodySchema = z.object({
+    email: z.string().email(),
+  });
 
   // Safe Parse for better error handling
-  const bodyValidation = bodySchema.safeParse(email);
+  const bodyValidation = bodySchema.safeParse({ email });
 
   if (!bodyValidation.success) {
     return {
@@ -810,7 +825,7 @@ export const forgotPasswordService = async (email: string) => {
   try {
     // Find the user by email
     const user = await User.findOne({
-      email: bodyValidation.data,
+      email: bodyValidation.data.email,
     });
 
     if (!user) {
@@ -833,11 +848,25 @@ export const forgotPasswordService = async (email: string) => {
     // Save the reset token
     await user.save();
 
+    // Generate url
+    const resetUrl = `${PROTOCOL}${HOST}${BASE_URL}/users/auth/reset-password/${resetToken}`;
+
+    // Send Email to User
+    const mailOptions = {
+      from: EMAIL_USER,
+      to: email,
+      subject: "Your Account Details",
+      text: `Hello ${user.name},\n\nClick the link below to reset your password:\n\n${resetUrl}\n\nIf you didn't request this, please ignore this email. this token will expire in 30 minutes. \n\nBest regards,\n${name}`,
+    };
+
+    // Send Email
+    await transporter.sendMail(mailOptions);
+
     // Response
     return {
       success: {
         success: true,
-        message: "Password reset successfully.",
+        message: "Password reset link sent successfully.",
         token: resetToken,
       },
     };

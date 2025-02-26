@@ -2,10 +2,8 @@ import { Context, Next } from "hono";
 import { authenticationError, authorizationError } from "./errors";
 import { verify } from "hono/jwt";
 import { User } from "../models";
-
-import dotenv from "dotenv";
-
-dotenv.config();
+import { config } from "dotenv";
+config();
 
 const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET as string;
 

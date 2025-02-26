@@ -15,9 +15,9 @@ customers.post(
 );
 
 // 🔹 Send message to the customer with access key and their information (Only admin)
-customers.post("/notification", protect, authorize(["admin"]), (c) =>
-  customer.sendNotification(c)
-);
+// customers.post("/notification", protect, authorize(["admin"]), (c) =>
+//   customer.sendNotification(c)
+// );
 
 // Regenerate Access Key (Only admin)
 customers.post("/regenerate-access-key", protect, authorize(["admin"]), (c) =>

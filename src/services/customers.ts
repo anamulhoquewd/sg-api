@@ -218,12 +218,55 @@ export const registerCustomerService = async (body: ICustomer) => {
   }
 };
 
-export const getSingleCustomerService = async (id: string) => {
+export const getSingleCustomerService = async ({
+  id,
+  queryParams,
+}: {
+  id: string;
+  queryParams: {
+    oPage: number;
+    pPage: number;
+    limit: number;
+    sortBy: string;
+    sortType: string;
+  };
+}) => {
+  const { oPage, pPage, limit, sortBy, sortType } = queryParams;
+
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
     return {
       error: schemaValidationError(idValidation.error, "Invalid ID"),
+    };
+  }
+
+  // Validate query
+  const querySchema = z.object({
+    sortBy: z
+      .enum(["createdAt", "updatedAt"])
+      .optional()
+      .default(defaults.sortBy as "createdAt" | "updatedAt"),
+    sortType: z
+      .enum(["asc", "desc"])
+      .optional()
+      .default(defaults.sortType as "asc" | "desc"),
+  });
+
+  // Validate query
+  const queryValidation = querySchema.safeParse({
+    sortBy,
+    sortType,
+  });
+  if (!queryValidation.success) {
+    return {
+      error: {
+        msg: "Invalid query parameters",
+        fields: queryValidation.error.issues.map((issue) => ({
+          name: String(issue.path[0]),
+          message: issue.message,
+        })),
+      },
     };
   }
 
@@ -239,12 +282,57 @@ export const getSingleCustomerService = async (id: string) => {
       };
     }
 
+    // Validate sort field
+    const validSortFields = ["createdAt", "updatedAt"];
+    const sortField = validSortFields.includes(queryValidation.data.sortBy)
+      ? queryValidation.data.sortBy
+      : "updatedAt";
+    const sortDirection =
+      queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
+
+    // Query for orders
+    const query = {
+      customerId: customer._id,
+    };
+
+    // Get orders
+    const orders = await Order.find(query)
+      .sort({ [sortField]: sortDirection })
+      .skip((oPage - 1) * limit)
+      .limit(limit);
+
+    // Get total orders count
+    const totalOrders = await Order.countDocuments(query);
+
+    // Get payments
+    const payments = await Payment.find(query)
+      .sort({ [sortField]: sortDirection })
+      .skip((pPage - 1) * limit)
+      .limit(limit);
+
+    // Get total payments count
+    const totalPayments = await Payment.countDocuments(query);
+
     // Response
     return {
       success: {
         success: true,
         message: "Customer fetched successfully",
-        data: customer,
+        data: {
+          customer,
+          orders: {
+            data: orders,
+            pagination: pagination({ page: oPage, limit, total: totalOrders }),
+          },
+          payments: {
+            data: payments,
+            pagination: pagination({
+              page: pPage,
+              limit,
+              total: totalPayments,
+            }),
+          },
+        },
       },
     };
   } catch (error: any) {
@@ -498,6 +586,8 @@ export const customerAccessService = async ({
       .enum(["asc", "desc"])
       .optional()
       .default(defaults.sortType as "asc" | "desc"),
+    fromDate: z.date().nullish(),
+    toDate: z.date().nullish(),
   });
 
   // Validate query
@@ -543,9 +633,9 @@ export const customerAccessService = async ({
 
     // Validate date range
     const dateFilter: any = {};
-    if (fromDate && toDate) {
-      dateFilter.$gte = new Date(fromDate);
-      dateFilter.$lte = new Date(toDate);
+    if (queryValidation.data.fromDate && queryValidation.data.toDate) {
+      dateFilter.$gte = new Date(queryValidation.data.fromDate);
+      dateFilter.$lte = new Date(queryValidation.data.toDate);
     }
 
     // Query for orders
@@ -578,9 +668,6 @@ export const customerAccessService = async ({
     // Get total payments count
     const totalPayments = await Payment.countDocuments(paymentQuery);
 
-    // Calculate total payment pages
-    const totalPaymentPages = Math.ceil(totalPayments / limit);
-
     // Response
     return {
       success: {
@@ -597,8 +684,9 @@ export const customerAccessService = async ({
             pagination: pagination({
               page: pPage,
               limit,
-              total: totalPaymentPages,
+              total: totalPayments,
             }),
+            // @TODO: Add Payment link
           },
         },
       },

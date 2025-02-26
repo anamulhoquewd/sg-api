@@ -162,7 +162,8 @@ export const registerOrderService = async (body: {
       )
       .transform((dateStr) => {
         // Convert valid string to Date Object
-        const [day, month, year] = dateStr.split("-").map(Number);
+        const [year, month, day] = dateStr.split("-").map(Number);
+
         return new Date(year, month - 1, day);
       }),
     note: z.string().optional(),
@@ -180,6 +181,8 @@ export const registerOrderService = async (body: {
       ),
     };
   }
+
+  console.log(bodyValidation.data);
 
   const { customerId, price, quantity, item, date, note } = bodyValidation.data;
 
@@ -261,7 +264,7 @@ export const getSingleOrderService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return{error: schemaValidationError(idValidation.error, "Invalid ID")}
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   try {
@@ -310,7 +313,7 @@ export const updateOrderService = async ({
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return{error: schemaValidationError(idValidation.error, "Invalid ID")}
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   // Validate the data
@@ -397,7 +400,7 @@ export const deleteOrderService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
   if (!idValidation.success) {
-    return{error: schemaValidationError(idValidation.error, "Invalid ID")}
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
   }
 
   try {

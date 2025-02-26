@@ -2,7 +2,7 @@ import { User } from "../models";
 import { Context } from "hono";
 import { decode, verify } from "hono/jwt";
 import { setSignedCookie, getSignedCookie, deleteCookie } from "hono/cookie";
-import dotenv from "dotenv";
+import {config} from "dotenv";
 import { generateAccessToken } from "./../lib";
 import { defaults } from "../config/defaults";
 import {
@@ -28,7 +28,7 @@ import {
   updateUserService,
 } from "../services";
 
-dotenv.config();
+config();
 
 const JWT_REFRESH_SECRET =
   (process.env.JWT_REFRESH_SECRET as string) || "refresh";
