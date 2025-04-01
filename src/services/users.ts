@@ -35,9 +35,7 @@ const AWS_SECRET_ACCESS_KEY =
   (process.env.AWS_SECRET_ACCESS_KEY as string) || "12345678";
 
 // Get environment variables
-const PROTOCOL = process.env.PROTOCOL;
-const HOST = process.env.HOST;
-const BASE_URL = process.env.BASE_URL;
+const DOMAIN = process.env.DOMAIN;
 
 // Create Email Transporter config
 const transporter = nodemailer.createTransport({
@@ -90,9 +88,8 @@ export const getUsersService = async (queryParams: {
 
   try {
     // Build query
-    const query: any = {
-      active,
-    };
+    const query: any = {};
+    if (active) query.active;
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -107,7 +104,7 @@ export const getUsersService = async (queryParams: {
 
     // Allowable sort fields
     const validSortFields = ["createdAt", "updatedAt", "name", "email"];
-    const sortField = validSortFields.includes(sortBy) ? sortBy : "updatedAt";
+    const sortField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
     const sortDirection =
       queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
@@ -435,7 +432,6 @@ export const updateProfileService = async ({
     email: string;
     phone: string;
     address: string;
-    active: boolean;
   };
 }) => {
   // Validate Body
@@ -450,7 +446,6 @@ export const updateProfileService = async ({
       )
       .optional(),
     address: z.string().max(100).optional(),
-    active: z.boolean().optional(),
   });
 
   // Validate Body
@@ -506,8 +501,9 @@ export const superAdminService = async () => {
 
     if (existingSuperAdmin) {
       return {
+        success: false,
         error: {
-          msg: "Super Admin already exists",
+          message: "Super Admin already exists",
         },
       };
     }
@@ -539,10 +535,10 @@ export const superAdminService = async () => {
 
     if (!bodyValidation.success) {
       return {
-        error: schemaValidationError(
-          bodyValidation.error,
-          "Invalid request body"
-        ),
+        success: false,
+        error: {
+          message: "Validation error",
+        },
       };
     }
 
@@ -561,16 +557,14 @@ export const superAdminService = async () => {
 
     // Response
     return {
-      success: {
-        message: "Super Admin created successfully!",
-        success: true,
-        data: docs,
-      },
+      message: "Super Admin created successfully!",
+      success: true,
+      data: docs,
     };
   } catch (error: any) {
     return {
-      serverError: {
-        success: false,
+      success: false,
+      error: {
         message: error.message,
         stack: process.env.NODE_ENV === "production" ? null : error.stack,
       },
@@ -849,7 +843,7 @@ export const forgotPasswordService = async (email: string) => {
     await user.save();
 
     // Generate url
-    const resetUrl = `${PROTOCOL}${HOST}${BASE_URL}/users/auth/reset-password/${resetToken}`;
+    const resetUrl = `${DOMAIN}/auth/reset-password/${resetToken}`;
 
     // Send Email to User
     const mailOptions = {
@@ -987,9 +981,12 @@ export const changeAvatarService = async ({
         // 2MB max
         message: "File size must be less than 2MB",
       })
-      .refine((file) => ["image/jpeg", "image/png"].includes(file.type), {
-        message: "Only JPEG and PNG files are allowed",
-      }),
+      .refine(
+        (file) => ["image/jpeg", "image/png", "image/jpg"].includes(file.type),
+        {
+          message: "Only JPEG, JPG and PNG files are allowed",
+        }
+      ),
   });
 
   if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY || !AWS_BUCKET_NAME) {
@@ -1023,9 +1020,9 @@ export const changeAvatarService = async ({
     // Upload to S3
     uploadAvatar({
       s3,
-      file,
+      file: fileValidation.data.avatar,
       filename,
-      fileType: file.type,
+      fileType: fileValidation.data.avatar.type,
       folder: "avatars",
       bucketName: AWS_BUCKET_NAME,
     });

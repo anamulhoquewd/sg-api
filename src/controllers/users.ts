@@ -2,7 +2,7 @@ import { User } from "../models";
 import { Context } from "hono";
 import { decode, verify } from "hono/jwt";
 import { setSignedCookie, getSignedCookie, deleteCookie } from "hono/cookie";
-import {config} from "dotenv";
+import { config } from "dotenv";
 import { generateAccessToken } from "./../lib";
 import { defaults } from "../config/defaults";
 import {
@@ -23,7 +23,6 @@ import {
   reGenerateS3AccessKey,
   registerUserService,
   resetPasswordService,
-  superAdminService,
   updateProfileService,
   updateUserService,
 } from "../services";
@@ -50,7 +49,7 @@ const getUsers = async (c: Context) => {
     sortBy,
     sortType,
     role,
-    active
+    active,
   });
 
   if (response.error) {
@@ -127,7 +126,7 @@ const getSingleUser = async (c: Context) => {
   const response = await getSingleUserService(id);
 
   if (response.error) {
-    return badRequestHandler(c, response.error)
+    return badRequestHandler(c, response.error);
   }
 
   if (response.serverError) {
@@ -197,21 +196,6 @@ const registerUser = async (c: Context) => {
   return c.json(response.success, 201);
 };
 
-// 🔹 Seed Admin User
-const superAdmin = async (c: Context) => {
-  const response = await superAdminService();
-
-  if (response.error) {
-    return badRequestHandler(c, response.error);
-  }
-
-  if (response.serverError) {
-    return serverErrorHandler(c, response.serverError);
-  }
-
-  return c.json(response.success, 201);
-};
-
 // 🔹 Login User
 const loginUser = async (c: Context) => {
   const body = await c.req.json();
@@ -235,16 +219,12 @@ const loginUser = async (c: Context) => {
     {
       path: "/",
       secure: process.env.NODE_ENV === "production",
-      // Remove or set to your specific subdomain
-      domain:
-        process.env.NODE_ENV === "production"
-          ? "example.vercel.app"
-          : undefined,
+      domain: process.env.NODE_ENV === "production" ? "vercel.com" : undefined,
       httpOnly: true,
       // Set the cookie to expire in 7 days
       maxAge: 60 * 60 * 24 * 7,
       expires: new Date(Date.now() + 60 * 60 * 24 * 7),
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     }
   );
 
@@ -255,25 +235,21 @@ const loginUser = async (c: Context) => {
 const refreshToken = async (c: Context) => {
   try {
     // Get refresh token from cookie
-    const refreshToken = await getSignedCookie(
-      c,
-      JWT_REFRESH_SECRET,
-      "refreshToken"
-    );
+    const rToken = await getSignedCookie(c, JWT_REFRESH_SECRET, "refreshToken");
 
-    if (!refreshToken) {
+    if (!rToken) {
       return authenticationError(c);
     }
 
     // Verify refresh token
-    const token = await verify(refreshToken, JWT_REFRESH_SECRET);
+    const token = await verify(rToken, JWT_REFRESH_SECRET);
 
     if (!token) {
       return authenticationError(c);
     }
 
     // Check if refresh token is valid
-    const user = await User.findOne({ refresh: refreshToken });
+    const user = await User.findOne({ refresh: rToken });
 
     if (!user) {
       return authorizationError(c, "Forbidden");
@@ -487,7 +463,6 @@ export {
   deleteUser,
   forgotPassword,
   resetPassword,
-  superAdmin,
   changeAvatar,
   refreshToken,
   logout,

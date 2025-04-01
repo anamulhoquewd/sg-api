@@ -6,18 +6,30 @@ import { pagination } from "../lib";
 import idSchema from "../controllers/utils";
 import { schemaValidationError } from "./utile";
 
-export const getOrdersService = async (queryParams: {
+interface GetOrderServiceProps {
   page: number;
   limit: number;
   sortBy: string;
   sortType: string;
   search: string;
-  fromDate: string | null;
-  toDate: string | null;
+  fromDate: Date | null;
+  toDate: Date | null;
+  date: Date | null;
   customer: string | null;
-}) => {
-  const { page, limit, sortBy, sortType, search, fromDate, toDate, customer } =
-    queryParams;
+}
+
+export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
+  const {
+    page,
+    limit,
+    sortBy,
+    sortType,
+    search,
+    fromDate,
+    toDate,
+    customer,
+    date,
+  } = queryParams;
 
   // Validate query parameters
   const querySchema = z.object({
@@ -28,6 +40,7 @@ export const getOrdersService = async (queryParams: {
       .default(defaults.sortType as "asc" | "desc"),
     fromDate: z.date().nullish(),
     toDate: z.date().nullish(),
+    date: z.date().nullish(),
     customer: z
       .string()
       .refine((val) => mongoose.Types.ObjectId.isValid(val), {
@@ -40,8 +53,9 @@ export const getOrdersService = async (queryParams: {
   const queryValidation = querySchema.safeParse({
     sortBy,
     sortType,
-    fromDate,
-    toDate,
+    fromDate: fromDate ? new Date(fromDate) : null,
+    toDate: toDate ? new Date(toDate) : null,
+    date: date ? new Date(date) : null,
     customer,
   });
   if (!queryValidation.success) {
@@ -73,14 +87,26 @@ export const getOrdersService = async (queryParams: {
       ...(queryValidation.data.customer
         ? { customerId: queryValidation.data.customer }
         : {}), // sort by customer ID for specific customer's orders
+      ...(queryValidation.data.date
+        ? {
+            date: {
+              $gte: new Date(queryValidation.data.date),
+              $lt: new Date(
+                new Date(queryValidation.data.date).getTime() + 86400000
+              ), // Next day
+            },
+          }
+        : {}),
     };
+
+    console.log("Query:", JSON.stringify(query, null, 2));
 
     // Allowable sort fields
     const validSortFields = ["createdAt", "updatedAt", "name"];
 
     const sortField = validSortFields.includes(queryValidation.data.sortBy)
       ? queryValidation.data.sortBy
-      : "updatedAt";
+      : "createdAt";
     const sortDirection =
       queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
@@ -181,8 +207,6 @@ export const registerOrderService = async (body: {
       ),
     };
   }
-
-  console.log(bodyValidation.data);
 
   const { customerId, price, quantity, item, date, note } = bodyValidation.data;
 

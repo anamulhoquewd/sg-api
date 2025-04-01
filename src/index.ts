@@ -8,13 +8,27 @@ import { logger } from "hono/logger";
 import { notFound, protect } from "./middlewares";
 import { users, customers, orders, payments } from "./routes";
 import { user } from "./controllers";
+import { superAdminService } from "./services";
 
 config();
 
 const app = new Hono().basePath("/api/v1");
 
 // 🔹 Config MongoDB
-connectDB();
+connectDB()
+  .then(async () => {
+    // Call the Super Admin Service function after connecting to MongoDB
+    const result = await superAdminService();
+
+    if (result.success) {
+      console.log(result.message || "Super created successfully!");
+    } else {
+      console.log(result.error?.message);
+    }
+  })
+  .catch((error) => {
+    console.error("Failed to initialize super admin:", error);
+  });
 
 // 🔹 Initialize middlewares
 app.use("*", logger(), prettyJSON());
@@ -22,15 +36,15 @@ app.use("*", logger(), prettyJSON());
 // 🔹 Cors
 app.use(
   cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    origin: "http://localhost:3000", // Your frontend URL
+    credentials: true, // Allow cookies
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"], // Ensure OPTIONS is handled
+    allowHeaders: ["Content-Type", "Authorization"], // Allow necessary headers
   })
 );
 
 // 🔹 Health check
-app.get("/health", (c) => {
-  return c.text("API is healthy!");
-});
+app.get("/health", (c) => c.text("API is healthy!"));
 
 // 🔹 Users Routes
 app.route("/users", users);

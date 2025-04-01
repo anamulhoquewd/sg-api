@@ -7,12 +7,7 @@ const customers = new Hono();
 customers.get("/", protect, (c) => customer.getCustomers(c));
 
 // 🔹 Create new customer (Private)
-customers.post(
-  "/auth/register",
-  protect,
-
-  (c) => customer.registerCustomer(c)
-);
+customers.post("/auth/register", protect, (c) => customer.registerCustomer(c));
 
 // 🔹 Send message to the customer with access key and their information (Only admin)
 // customers.post("/notification", protect, authorize(["admin"]), (c) =>
@@ -27,7 +22,7 @@ customers.post("/regenerate-access-key", protect, authorize(["admin"]), (c) =>
 // 🔹 Customer access their own account with access key (public)
 customers.get("/access", (c) => customer.customerAccess(c));
 
-// Get Single User (Private)
+// 🔹 Get Single User (Private)
 customers.get("/:id", protect, (c) => customer.getSingleCustomer(c));
 
 // 🔹 Update User (Private)

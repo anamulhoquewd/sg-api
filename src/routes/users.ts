@@ -10,9 +10,6 @@ users.get("/", protect, (c) => user.getUsers(c));
 // 🔹 Create User (Only super admin)
 users.post("/auth/register", protect, authorize(), (c) => user.registerUser(c));
 
-// 🔹 Seed Admin User (On time)
-users.post("/auth/super-admin", (c) => user.superAdmin(c));
-
 // 🔹 Login User (Public)
 users.post("/auth/login", (c) => user.loginUser(c));
 
@@ -23,12 +20,7 @@ users.post("/auth/logout", protect, (c) => user.logout(c));
 users.post("/auth/refresh", (c) => user.refreshToken(c));
 
 // 🔹 Change Password (Private)
-users.patch(
-  "/auth/change-password",
-  protect,
-
-  (c) => user.changePassword(c)
-);
+users.patch("/auth/change-password", protect, (c) => user.changePassword(c));
 
 // 🔹 Forgot Password request (Public)
 users.post("/auth/forgot-password", (c) => user.forgotPassword(c));

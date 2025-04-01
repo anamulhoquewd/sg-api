@@ -52,7 +52,7 @@ export const getPaymentsService = async (queryParams: {
     const validSortFields = ["createdAt", "updatedAt", "amount"];
     const sortField = validSortFields.includes(queryValidation.data.sortBy)
       ? queryValidation.data.sortBy
-      : "updatedAt";
+      : "createdAt";
     const sortDirection =
       queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 

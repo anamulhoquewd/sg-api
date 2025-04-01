@@ -54,9 +54,8 @@ export const getCustomersService = async (queryParams: {
     };
   }
 
-  const query: any = {
-    active,
-  };
+  const query: any = {};
+  if (active) query.active;
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: "i" } },
@@ -67,7 +66,7 @@ export const getCustomersService = async (queryParams: {
   const validSortFields = ["createdAt", "updatedAt", "name"];
   const sortField = validSortFields.includes(queryValidation.data.sortBy)
     ? queryValidation.data.sortBy
-    : "updatedAt";
+    : "createdAt";
   const sortDirection =
     queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
@@ -124,19 +123,20 @@ export const registerCustomerService = async (body: ICustomer) => {
       active: z.boolean().default(true),
       defaultOffDays: z
         .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
-        .nonempty(),
+        .default([])
+        .refine(
+          (days) =>
+            days.every((day) =>
+              ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
+            ),
+          {
+            message:
+              "Default off days must be from: sa, su, mo, tu, we, th, fr",
+            path: ["defaultOffDays"],
+          }
+        ),
     })
-    .refine(
-      (data) =>
-        data.defaultOffDays?.every((day: string) =>
-          ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
-        ) ?? true,
-      {
-        message:
-          "Default off days must be in the following order: sa, su, mo, tu, we, th, fr",
-        path: ["defaultOffDays"],
-      }
-    );
+   
 
   // Validate the data
   const bodyValidation = customerSchemaZod.safeParse(body);
@@ -371,9 +371,8 @@ export const updateCustomerService = async ({
       paymentSystem: z.enum(["weekly", "monthly"]).optional(),
       active: z.boolean().optional(),
       defaultOffDays: z
-        .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
-        .nonempty()
-        .optional(),
+        .array(z.string())
+        .default([]),
     })
     .refine(
       (data) =>

@@ -16,8 +16,15 @@ const getOrders = async (c: Context) => {
   const search = c.req.query("search") || defaults.search;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
-  const fromDate = c.req.query("fromDate") || null;
-  const toDate = c.req.query("toDate") || null;
+  const fromDate = c.req.query("fromDate")
+    ? new Date(c.req.query("fromDate") as string)
+    : null;
+  const toDate = c.req.query("toDate")
+    ? new Date(c.req.query("toDate") as string)
+    : null;
+  const date = c.req.query("date")
+    ? new Date(c.req.query("date") as string)
+    : null;
   const customer = c.req.query("customer") || null;
 
   const response = await getOrdersService({
@@ -28,8 +35,11 @@ const getOrders = async (c: Context) => {
     sortType,
     toDate,
     fromDate,
+    date,
     customer,
   });
+
+  console.log("Dates: ", fromDate, toDate, date);
 
   if (response.error) {
     return badRequestHandler(c, response.error);

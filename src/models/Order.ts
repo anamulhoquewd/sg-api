@@ -62,6 +62,14 @@ const orderSchema = new Schema<IOrder>(
   { timestamps: true }
 );
 
+// 🔹 Middleware: Double quantity if item is "lunch&dinner"
+orderSchema.pre("save", function (this: IOrder, next) {
+  if (this.item === "lunch&dinner") this.quantity *= 2;
+
+  next();
+});
+
+// 🔹 Middleware: Calculate total
 orderSchema.pre("save", function (this: IOrder, next) {
   if (this.price && this.quantity) {
     this.total = this.price * this.quantity;

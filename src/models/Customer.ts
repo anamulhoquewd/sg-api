@@ -3,49 +3,72 @@ import { z } from "zod";
 import crypto from "crypto";
 
 // 🔹 Zod Schema for Customer Validation
-const customerSchemaZod = z.object({
-  name: z.string().min(3).max(50),
-  phone: z
-    .string()
-    .regex(
-      /^01\d{9}$/,
-      "Phone number must start with 01 and be exactly 11 digits"
-    ),
-  address: z.string().max(100),
-  defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"]),
-  defaultPrice: z.number().min(1),
-  defaultQuantity: z.number().min(1),
-  defaultOffDays: z
-    .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
-    .nonempty(),
-  paymentStatus: z
-    .enum(["paid", "partially_paid", "pending"])
-    .default("pending"),
-  paymentSystem: z.enum(["weekly", "monthly"]).default("weekly"),
-  amount: z.number().default(0),
-  accessKey: z.string().optional(),
-  accessKeyExpiredAt: z.date().optional(),
-  active: z.boolean().default(true),
-});
+const customerSchemaZod = z
+  .object({
+    name: z.string().min(3).max(20),
+    phone: z
+      .string()
+      .regex(
+        /^01\d{9}$/,
+        "Phone number must start with 01 and be exactly 11 digits"
+      ),
+    address: z.string().min(2).max(50),
+    defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"], {
+      required_error: "Please select a default item",
+    }),
+    defaultPrice: z.coerce
+      .number()
+      .positive({ message: "Price must be a positive number" }),
+    defaultQuantity: z.coerce
+      .number()
+      .int()
+      .positive({ message: "Quantity must be a positive integer" }),
+    defaultOffDays: z
+      .array(z.string())
+      .default([]),
+    paymentStatus: z.enum(["paid", "partially_paid", "pending"], {
+      required_error: "Please select a payment status",
+    }),
+    paymentSystem: z.enum(["weekly", "monthly"], {
+      required_error: "Please select a payment system",
+    }),
+    amount: z.number().default(0),
+    accessKey: z.string().optional(),
+    accessKeyExpiredAt: z.date().optional(),
+    active: z.boolean().default(true),
+  })
+  .refine(
+    (data) =>
+      data.defaultOffDays?.every((day: string) =>
+        ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
+      ) ?? true,
+    {
+      message:
+        "Default off days must be in the following order: sa, su, mo, tu, we, th, fr",
+      path: ["defaultOffDays"],
+    }
+  );
 
 // 🔹 Mongoose Schema
 interface ICustomer extends z.infer<typeof customerSchemaZod> {}
+
+console.log()
 
 // 🔹 Mongoose Document
 interface ICustomerDoc extends Document {
   name: string;
   phone: string;
   address: string;
-  defaultItem: string;
+  defaultItem: "lunch" | "dinner" | "lunch&dinner";
   defaultPrice: number;
   defaultQuantity: number;
-  defaultOffDays: string[];
-  paymentStatus: string;
-  paymentSystem: string;
+  defaultOffDays: "sa" | "su" | "mo" | "tu" | "we" | "th" | "fr";
+  paymentStatus: "paid" | "partially_paid" | "pending";
+  paymentSystem: "weekly" | "monthly";
   amount: number;
+  active: boolean;
   accessKey?: string;
   accessKeyExpiredAt?: Date;
-  active: boolean;
   generateAccessKey: (minutes?: number) => string;
 }
 

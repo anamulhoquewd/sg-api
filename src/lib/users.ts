@@ -61,6 +61,7 @@ const generateS3AccessKey = async ({
     });
 
     return await getSignedUrl(s3, command, { expiresIn: 60 * 60 * 24 * 7 }); // Expiry set to 7 days
+    // return await getSignedUrl(s3, command, { expiresIn: 60 * 1 }); // One minuit for testing.
   } catch (error: any) {
     throw new Error(error);
   }
@@ -84,8 +85,8 @@ const generateAccessToken = async ({
       id: user._id,
       role: user.role,
       email: user.email,
-      exp: Math.floor(Date.now() / 1000) + 60 * (expMinutes + 55),
-      // exp: Math.floor(Date.now() / 1000) + 60,
+      // exp: Math.floor(Date.now() / 1000) + 60 * expMinutes,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 2,
     },
     JWT_ACCESS_SECRET
   );
@@ -110,7 +111,7 @@ const generateRefreshToken = async ({
       id: user._id,
       role: user.role,
       email: user.email,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * expDays,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 6,
       // exp: Math.floor(Date.now() / 1000) + 60 * 2,
     },
     JWT_REFRESH_SECRET
