@@ -25,6 +25,7 @@ import {
   resetPasswordService,
   updateProfileService,
   updateUserService,
+  getUserCountService,
 } from "../services";
 
 config();
@@ -55,6 +56,17 @@ const getUsers = async (c: Context) => {
   if (response.error) {
     return badRequestHandler(c, response.error);
   }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
+};
+
+// 🔹 Count how many users I have.
+const getUserCount = async (c: Context) => {
+  const response = await getUserCountService();
 
   if (response.serverError) {
     return serverErrorHandler(c, response.serverError);
@@ -464,6 +476,7 @@ export {
   forgotPassword,
   resetPassword,
   changeAvatar,
+  getUserCount,
   refreshToken,
   logout,
 };

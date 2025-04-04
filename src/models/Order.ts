@@ -56,7 +56,11 @@ const orderSchema = new Schema<IOrder>(
       required: true,
       enum: ["lunch", "dinner", "lunch&dinner"],
     },
-    date: { type: Date, default: () => Date.now() },
+    date: {
+      type: Date,
+      required: true,
+      index: true,
+    },
     note: { type: String },
   },
   { timestamps: true }

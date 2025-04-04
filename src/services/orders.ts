@@ -5,6 +5,21 @@ import { Customer, Order } from "../models";
 import { pagination } from "../lib";
 import idSchema from "../controllers/utils";
 import { schemaValidationError } from "./utile";
+import { calculatePercentage } from "../utils";
+import {
+  addDays,
+  endOfDay,
+  endOfMonth,
+  endOfYear,
+  format,
+  getMonth,
+  startOfDay,
+  startOfMonth,
+  startOfYear,
+  subDays,
+  subMonths,
+  subYears,
+} from "date-fns";
 
 interface GetOrderServiceProps {
   page: number;
@@ -44,7 +59,7 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
     customer: z
       .string()
       .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-        message: "Invalid MongoDB User ID format",
+        message: "Invalid MongoDB Order ID format",
       })
       .nullish(),
   });
@@ -75,6 +90,10 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
       dateFilter.$lte = new Date(queryValidation.data.toDate);
     }
 
+    console.log("Date Range Date: ", queryValidation.data.date);
+    console.log("Date Range From date: ", queryValidation.data.fromDate);
+    console.log("Date Range To date: ", queryValidation.data.toDate);
+
     // Query
     const query = {
       $or: [
@@ -89,24 +108,23 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
         : {}), // sort by customer ID for specific customer's orders
       ...(queryValidation.data.date
         ? {
-            date: {
-              $gte: new Date(queryValidation.data.date),
-              $lt: new Date(
-                new Date(queryValidation.data.date).getTime() + 86400000
-              ), // Next day
-            },
+            // date: {
+            //   $gte: new Date(queryValidation.data.date),
+            //   $lt: new Date(
+            //     new Date(queryValidation.data.date).getTime() + 86400000
+            //   ), // Next day
+            // },
+            date: new Date(queryValidation.data.date),
           }
         : {}),
     };
 
-    console.log("Query:", JSON.stringify(query, null, 2));
-
     // Allowable sort fields
-    const validSortFields = ["createdAt", "updatedAt", "name"];
+    const validSortFields = ["createdAt", "updatedAt", "name", "date"];
 
     const sortField = validSortFields.includes(queryValidation.data.sortBy)
       ? queryValidation.data.sortBy
-      : "createdAt";
+      : "date";
     const sortDirection =
       queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
@@ -143,6 +161,102 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
   }
 };
 
+export const getOrdersCountService = async () => {
+  try {
+    // 1. Today's range (start and end of day)
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
+
+    // 2. Yesterday's range (start and end of yesterday)
+    const yesterdayStart = startOfDay(subDays(new Date(), 1));
+    const yesterdayEnd = endOfDay(subDays(new Date(), 1));
+
+    // 3. Current month's range (start and end of month)
+    const currentMonthStart = startOfMonth(new Date());
+    const currentMonthEnd = endOfMonth(new Date());
+
+    // 4. Previous month's range (start and end of last month)
+    const prevMonthStart = startOfMonth(subMonths(new Date(), 1));
+    const prevMonthEnd = endOfMonth(subMonths(new Date(), 1));
+
+    // 5. Current year's rang (start and end of last year)
+    const currentYearStart = startOfYear(new Date());
+    const currentYearEnd = endOfYear(new Date());
+
+    // 6. Previous year's rang (start and end of last year)
+    const prevYearStart = startOfYear(subYears(new Date(), 1));
+    const prevYearEnd = endOfYear(subYears(new Date(), 1));
+
+    // 7. Fetch counts using MongoDB queries
+    const [
+      todayOrders,
+      yesterdayOrders,
+      currentMonthOrders,
+      prevMonthOrders,
+      currentYearOrders,
+      prevYearOrders,
+      totalOrders,
+    ] = await Promise.all([
+      Order.countDocuments({ date: { $gte: todayStart, $lte: todayEnd } }),
+      Order.countDocuments({
+        date: { $gte: yesterdayStart, $lte: yesterdayEnd },
+      }),
+      Order.countDocuments({
+        date: { $gte: currentMonthStart, $lte: currentMonthEnd },
+      }),
+      Order.countDocuments({
+        date: { $gte: prevMonthStart, $lte: prevMonthEnd },
+      }),
+      Order.countDocuments({
+        date: { $gte: currentYearStart, $lte: currentYearEnd },
+      }),
+      Order.countDocuments({
+        date: { $gte: prevYearStart, $lte: prevYearEnd },
+      }),
+      Order.countDocuments({}),
+    ]);
+
+    const dailyChangePercent = calculatePercentage(
+      todayOrders,
+      yesterdayOrders
+    );
+    const monthlyChangePercent = calculatePercentage(
+      currentMonthOrders,
+      prevMonthOrders
+    );
+    const yearlyChangePercent = calculatePercentage(
+      currentYearOrders,
+      prevYearOrders
+    );
+
+    return {
+      success: {
+        success: true,
+        message: "Orders counted",
+        data: {
+          dailyChange: `${dailyChangePercent}%`,
+          monthlyChange: `${monthlyChangePercent}%`,
+          yearlyChange: `${yearlyChangePercent}%`,
+
+          todayOrders,
+          yesterdayOrders,
+          currentMonthOrders,
+          prevMonthOrders,
+          totalOrders,
+        },
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
 export const registerOrderService = async (body: {
   customerId: string;
   price: number;
@@ -155,11 +269,11 @@ export const registerOrderService = async (body: {
   const bodySchema = z.object({
     customerId: z
       .any()
-      .transform((val) =>
-        val instanceof mongoose.Types.ObjectId ? val.toString() : val
+      .transform((value) =>
+        value instanceof mongoose.Types.ObjectId ? value.toString() : value
       )
-      .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-        message: "Invalid MongoDB User ID format",
+      .refine((value) => mongoose.Types.ObjectId.isValid(value), {
+        message: "Invalid MongoDB Order ID format",
       }),
     price: z.number().optional(),
     quantity: z.number().optional(),
@@ -183,14 +297,13 @@ export const registerOrderService = async (body: {
           );
         },
         {
-          message: "Invalid date or incorrect format (YYYY-MM-DD)",
+          message: "Invalid date or incorrect format (yyyy-MM-dd)",
         }
       )
       .transform((dateStr) => {
         // Convert valid string to Date Object
         const [year, month, day] = dateStr.split("-").map(Number);
-
-        return new Date(year, month - 1, day);
+        return new Date(Date.UTC(year, month - 1, day)).toISOString();
       }),
     note: z.string().optional(),
   });
@@ -209,6 +322,8 @@ export const registerOrderService = async (body: {
   }
 
   const { customerId, price, quantity, item, date, note } = bodyValidation.data;
+
+  console.log("Date for register a order", date);
 
   try {
     // Get customer
@@ -237,7 +352,12 @@ export const registerOrderService = async (body: {
         error: {
           msg: "Order already exists for this customer on this date and item",
           fields: [
-            { name: "date", message: "Order already exists for this date" },
+            {
+              name: "date",
+              message: `Order already exists for this date ${
+                new Date(date).toISOString().split("T")[0]
+              }`,
+            },
           ],
         },
       };

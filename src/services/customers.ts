@@ -71,7 +71,7 @@ export const getCustomersService = async (queryParams: {
     queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
   try {
-    const users = await Customer.find(query)
+    const Customers = await Customer.find(query)
       .sort({ [sortField]: sortDirection })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -88,9 +88,85 @@ export const getCustomersService = async (queryParams: {
     return {
       success: {
         success: true,
-        message: "Users fetched successfully",
-        data: users,
+        message: "Customers fetched successfully",
+        data: Customers,
         pagination: getPagination,
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
+export const getCustomerCountService = async () => {
+  try {
+    const active = await Customer.countDocuments({ active: true });
+    const total = await Customer.countDocuments({});
+
+    // Calculate Customer growth
+    // Get current month
+    const currentDate = new Date();
+    const currentMonthStart = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1
+    );
+
+    // Get previous month
+    const prevMonthStart = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      1
+    );
+    // Get last day of previous month
+    const prevMonthEnd = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      0
+    );
+
+    // Count new Customers of current month
+    const currentMonthNewCustomers = await Customer.countDocuments({
+      createdAt: { $gte: currentMonthStart },
+    });
+
+    // Count new Customers of previous month
+    const prevMonthNewCustomers = await Customer.countDocuments({
+      createdAt: { $gte: prevMonthStart, $lte: prevMonthEnd },
+    });
+
+    // Calculate Customer growth
+    const customerGrowth = currentMonthNewCustomers - prevMonthNewCustomers;
+
+    // Calculate growth percentage
+    let growthPercentage = 0;
+    if (prevMonthNewCustomers > 0) {
+      growthPercentage = (customerGrowth / prevMonthNewCustomers) * 100;
+    } else if (currentMonthNewCustomers > 0) {
+      growthPercentage = 100;
+    }
+
+    const activePercentage = total > 0 ? (active / total) * 100 : 0;
+
+    return {
+      success: {
+        success: true,
+        message: "Customers Counted",
+        data: {
+          active,
+          total,
+          currentMonthNew: currentMonthNewCustomers,
+          prevMonthNew: prevMonthNewCustomers,
+          growth: customerGrowth,
+          growthPercentage: growthPercentage.toFixed(2) + "%",
+          activePercentage: activePercentage.toFixed(2) + "%",
+        },
       },
     };
   } catch (error: any) {
@@ -106,37 +182,34 @@ export const getCustomersService = async (queryParams: {
 
 export const registerCustomerService = async (body: ICustomer) => {
   //  Validate the data
-  const customerSchemaZod = z
-    .object({
-      name: z.string().min(3).max(50),
-      phone: z
-        .string()
-        .regex(
-          /^01\d{9}$/,
-          "Phone number must start with 01 and be exactly 11 digits"
-        ),
-      address: z.string().max(100),
-      defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"]),
-      defaultPrice: z.number(),
-      defaultQuantity: z.number(),
-      paymentSystem: z.enum(["weekly", "monthly"]),
-      active: z.boolean().default(true),
-      defaultOffDays: z
-        .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
-        .default([])
-        .refine(
-          (days) =>
-            days.every((day) =>
-              ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
-            ),
-          {
-            message:
-              "Default off days must be from: sa, su, mo, tu, we, th, fr",
-            path: ["defaultOffDays"],
-          }
-        ),
-    })
-   
+  const customerSchemaZod = z.object({
+    name: z.string().min(3).max(50),
+    phone: z
+      .string()
+      .regex(
+        /^01\d{9}$/,
+        "Phone number must start with 01 and be exactly 11 digits"
+      ),
+    address: z.string().max(100),
+    defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"]),
+    defaultPrice: z.number(),
+    defaultQuantity: z.number(),
+    paymentSystem: z.enum(["weekly", "monthly"]),
+    active: z.boolean().default(true),
+    defaultOffDays: z
+      .array(z.enum(["sa", "su", "mo", "tu", "we", "th", "fr"]))
+      .default([])
+      .refine(
+        (days) =>
+          days.every((day) =>
+            ["sa", "su", "mo", "tu", "we", "th", "fr"].includes(day)
+          ),
+        {
+          message: "Default off days must be from: sa, su, mo, tu, we, th, fr",
+          path: ["defaultOffDays"],
+        }
+      ),
+  });
 
   // Validate the data
   const bodyValidation = customerSchemaZod.safeParse(body);
@@ -370,9 +443,7 @@ export const updateCustomerService = async ({
       defaultQuantity: z.number().optional(),
       paymentSystem: z.enum(["weekly", "monthly"]).optional(),
       active: z.boolean().optional(),
-      defaultOffDays: z
-        .array(z.string())
-        .default([]),
+      defaultOffDays: z.array(z.string()).default([]),
     })
     .refine(
       (data) =>

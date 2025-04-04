@@ -6,6 +6,9 @@ const orders = new Hono();
 // 🔹 Get All orders (Private)
 orders.get("/", protect, (c) => order.getOrders(c));
 
+// 
+orders.get("/count", protect, (c) => order.getOrderCount(c));
+
 // 🔹 Create User (Private)
 orders.post("/", protect, (c) => order.registerOrder(c));
 

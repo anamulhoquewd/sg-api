@@ -7,6 +7,9 @@ const users = new Hono();
 // 🔹 Get All Users
 users.get("/", protect, (c) => user.getUsers(c));
 
+// 🔹 Count how many users I have.
+users.get("/count", protect, (c) => user.getUserCount(c));
+
 // 🔹 Create User (Only super admin)
 users.post("/auth/register", protect, authorize(), (c) => user.registerUser(c));
 

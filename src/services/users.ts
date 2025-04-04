@@ -144,6 +144,82 @@ export const getUsersService = async (queryParams: {
   }
 };
 
+export const getUserCountService = async () => {
+  try {
+    const active = await User.countDocuments({ active: true });
+    const total = await User.countDocuments({});
+
+    // Calculate user growth
+    // Get current month
+    const currentDate = new Date();
+    const currentMonthStart = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1
+    );
+
+    // Get previous month
+    const prevMonthStart = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      1
+    );
+    // Get last day of previous month
+    const prevMonthEnd = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      0
+    );
+
+    // Count new users of current month
+    const currentMonthNewUsers = await User.countDocuments({
+      createdAt: { $gte: currentMonthStart },
+    });
+
+    // Count new users of previous month
+    const prevMonthNewUsers = await User.countDocuments({
+      createdAt: { $gte: prevMonthStart, $lte: prevMonthEnd },
+    });
+
+    // Calculate user growth
+    const userGrowth = currentMonthNewUsers - prevMonthNewUsers;
+
+    // Calculate growth percentage
+    let growthPercentage = 0;
+    if (prevMonthNewUsers > 0) {
+      growthPercentage = (userGrowth / prevMonthNewUsers) * 100;
+    } else if (currentMonthNewUsers > 0) {
+      growthPercentage = 100;
+    }
+
+    const activePercentage = total > 0 ? (active / total) * 100 : 0;
+
+    return {
+      success: {
+        success: true,
+        message: "Users Counted",
+        data: {
+          active,
+          total,
+          currentMonthNew: currentMonthNewUsers,
+          prevMonthNew: prevMonthNewUsers,
+          growth: userGrowth,
+          growthPercentage: growthPercentage.toFixed(2) + "%",
+          activePercentage: activePercentage.toFixed(2) + "%",
+        },
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
 export const registerUserService = async (body: {
   name: string;
   email: string;

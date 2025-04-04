@@ -6,6 +6,9 @@ const customers = new Hono();
 // 🔹 Get All customers (Private)
 customers.get("/", protect, (c) => customer.getCustomers(c));
 
+// 🔹 Count how many users I have.
+customers.get("/count", protect, (c) => customer.getCustomerCount(c));
+
 // 🔹 Create new customer (Private)
 customers.post("/auth/register", protect, (c) => customer.registerCustomer(c));
 

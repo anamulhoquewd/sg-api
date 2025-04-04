@@ -12,6 +12,7 @@ import {
   updateCustomerService,
   regenerateAccessKeyService,
   customerAccessService,
+  getCustomerCountService,
 } from "../services";
 
 // 🔹 Get All customers
@@ -41,6 +42,17 @@ const getCustomers = async (c: Context) => {
   }
 
   return c.json(response.success);
+};
+
+// 🔹 Count how many users I have.
+const getCustomerCount = async (c: Context) => {
+  const response = await getCustomerCountService();
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
 };
 
 // 🔹 Send message to the customer
@@ -292,4 +304,5 @@ export {
   deleteCustomer,
   regenerateAccessKey,
   customerAccess,
+  getCustomerCount,
 };

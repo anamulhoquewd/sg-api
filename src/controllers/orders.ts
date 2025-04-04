@@ -7,6 +7,7 @@ import {
   registerOrderService,
   updateOrderService,
   deleteOrderService,
+  getOrdersCountService,
 } from "../services";
 
 // 🔹Get all orders
@@ -39,11 +40,20 @@ const getOrders = async (c: Context) => {
     customer,
   });
 
-  console.log("Dates: ", fromDate, toDate, date);
-
   if (response.error) {
     return badRequestHandler(c, response.error);
   }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
+};
+
+// 🔹 Count how many orders I have.
+const getOrderCount = async (c: Context) => {
+  const response = await getOrdersCountService();
 
   if (response.serverError) {
     return serverErrorHandler(c, response.serverError);
@@ -121,4 +131,11 @@ const deleteOrder = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-export { getOrders, registerOrder, getSingleOrder, updateOrder, deleteOrder };
+export {
+  getOrders,
+  registerOrder,
+  getSingleOrder,
+  updateOrder,
+  deleteOrder,
+  getOrderCount,
+};

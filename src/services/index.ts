@@ -12,6 +12,8 @@ import {
   forgotPasswordService,
   resetPasswordService,
   changeAvatarService,
+  getUserCountService,
+  
 } from "./users";
 import {
   getCustomersService,
@@ -21,13 +23,14 @@ import {
   regenerateAccessKeyService,
   deleteCustomerService,
   customerAccessService,
+  getCustomerCountService
 } from "./customers";
 import {
   getOrdersService,
   registerOrderService,
   getSingleOrderService,
   updateOrderService,
-  deleteOrderService,
+  deleteOrderService,getOrdersCountService
 } from "./orders";
 import {
   deletePaymentService,
@@ -40,6 +43,7 @@ import {
 export {
   reGenerateS3AccessKey,
   getUsersService,
+  getUserCountService,
   registerUserService,
   getSingleUserService,
   updateUserService,
@@ -47,6 +51,7 @@ export {
   loginService,
   superAdminService,
   deleteUserService,
+  getCustomerCountService,
   changePasswordService,
   forgotPasswordService,
   resetPasswordService,
@@ -67,5 +72,5 @@ export {
   getPaymentsService,
   getSinglePaymentService,
   registerPaymentService,
-  updatePaymentService,
+  updatePaymentService,getOrdersCountService
 };
