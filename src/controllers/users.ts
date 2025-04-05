@@ -41,7 +41,10 @@ const getUsers = async (c: Context) => {
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
   const role = c.req.query("role") || "";
-  const active = c.req.query("active") === "false" ? false : true;
+  const active = c.req.query("active");
+
+  const activity =
+    active === "false" ? false : active === "true" ? true : "";
 
   const response = await getUsersService({
     page,
@@ -50,7 +53,7 @@ const getUsers = async (c: Context) => {
     sortBy,
     sortType,
     role,
-    active,
+    active: activity,
   });
 
   if (response.error) {

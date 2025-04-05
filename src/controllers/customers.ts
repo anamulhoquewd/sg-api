@@ -22,7 +22,9 @@ const getCustomers = async (c: Context) => {
   const search = c.req.query("search") || defaults.search;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
-  const active = c.req.query("active") === "false" ? false : true;
+  const active = c.req.query("active");
+
+  const activity = active === "false" ? false : active === "true" ? true : "";
 
   const response = await getCustomersService({
     page,
@@ -30,7 +32,7 @@ const getCustomers = async (c: Context) => {
     sortType,
     sortBy,
     search,
-    active,
+    active: activity
   });
 
   if (response.error) {

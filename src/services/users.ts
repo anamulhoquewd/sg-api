@@ -53,7 +53,7 @@ export const getUsersService = async (queryParams: {
   sortBy: string;
   sortType: string;
   role: string;
-  active: boolean;
+  active: boolean | string;
 }) => {
   const { page, limit, search, sortBy, sortType, role, active } = queryParams;
 
@@ -65,7 +65,7 @@ export const getUsersService = async (queryParams: {
       .optional()
       .default(defaults.sortType as "asc" | "desc"),
     role: z.enum(["admin", "manager", "super_admin", ""]).optional(),
-    active: z.boolean().optional(),
+    // active: z.boolean().optional(),
   });
 
   // Safe Parse for better error handling
@@ -73,7 +73,7 @@ export const getUsersService = async (queryParams: {
     sortBy,
     sortType,
     role,
-    active,
+    // active,
   });
 
   // Return error if validation fails
@@ -89,7 +89,7 @@ export const getUsersService = async (queryParams: {
   try {
     // Build query
     const query: any = {};
-    if (active) query.active;
+    if (active !== "") query.active = active;
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -98,6 +98,7 @@ export const getUsersService = async (queryParams: {
         { NID: { $regex: search, $options: "i" } },
       ];
     }
+
     if (queryValidation.data.role) {
       query.role = queryValidation.data.role;
     }
@@ -148,51 +149,9 @@ export const getUserCountService = async () => {
   try {
     const active = await User.countDocuments({ active: true });
     const total = await User.countDocuments({});
-
-    // Calculate user growth
-    // Get current month
-    const currentDate = new Date();
-    const currentMonthStart = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    );
-
-    // Get previous month
-    const prevMonthStart = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() - 1,
-      1
-    );
-    // Get last day of previous month
-    const prevMonthEnd = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      0
-    );
-
-    // Count new users of current month
-    const currentMonthNewUsers = await User.countDocuments({
-      createdAt: { $gte: currentMonthStart },
-    });
-
-    // Count new users of previous month
-    const prevMonthNewUsers = await User.countDocuments({
-      createdAt: { $gte: prevMonthStart, $lte: prevMonthEnd },
-    });
-
-    // Calculate user growth
-    const userGrowth = currentMonthNewUsers - prevMonthNewUsers;
-
-    // Calculate growth percentage
-    let growthPercentage = 0;
-    if (prevMonthNewUsers > 0) {
-      growthPercentage = (userGrowth / prevMonthNewUsers) * 100;
-    } else if (currentMonthNewUsers > 0) {
-      growthPercentage = 100;
-    }
-
-    const activePercentage = total > 0 ? (active / total) * 100 : 0;
+    const admins = await User.countDocuments({ role: "admin" });
+    const super_admin = await User.countDocuments({ role: "super_admin" });
+    const managers = await User.countDocuments({ role: "manager" });
 
     return {
       success: {
@@ -201,11 +160,9 @@ export const getUserCountService = async () => {
         data: {
           active,
           total,
-          currentMonthNew: currentMonthNewUsers,
-          prevMonthNew: prevMonthNewUsers,
-          growth: userGrowth,
-          growthPercentage: growthPercentage.toFixed(2) + "%",
-          activePercentage: activePercentage.toFixed(2) + "%",
+          admins,
+          super_admin,
+          managers,
         },
       },
     };

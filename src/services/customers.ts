@@ -24,7 +24,7 @@ export const getCustomersService = async (queryParams: {
   search: string;
   sortType: string;
   sortBy: string;
-  active: boolean;
+  active: boolean | string;
 }) => {
   const { sortBy, sortType, page, limit, search, active } = queryParams;
   const querySchema = z.object({
@@ -36,13 +36,11 @@ export const getCustomersService = async (queryParams: {
       .enum(["asc", "desc"])
       .optional()
       .default(defaults.sortType as "asc" | "desc"),
-    active: z.boolean().optional(),
   });
 
   const queryValidation = querySchema.safeParse({
     sortBy,
     sortType,
-    active,
   });
 
   if (!queryValidation.success) {
@@ -55,7 +53,7 @@ export const getCustomersService = async (queryParams: {
   }
 
   const query: any = {};
-  if (active) query.active;
+  if (active !== "") query.active = active;
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: "i" } },
