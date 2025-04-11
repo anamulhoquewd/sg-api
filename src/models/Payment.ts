@@ -12,9 +12,10 @@ const paymentSchemaZod = z.object({
       message: "Invalid MongoDB User ID format",
     }),
   amount: z.number().min(1),
-  paymentMethod: z.enum(["bank", "bkash", "nagad", "cash"]),
   note: z.string().optional(),
+  name: z.string(),
   transactionDetails: z.object({
+    paymentMethod: z.enum(["bank", "bkash", "nagad", "cash"]),
     transactionId: z.string().optional(),
     bankName: z.string().optional(),
     bkashNumber: z
@@ -22,13 +23,15 @@ const paymentSchemaZod = z.object({
       .regex(
         /^01\d{9}$/,
         "Phone number must start with 01 and be exactly 11 digits"
-      ).optional(),
+      )
+      .optional(),
     nagadNumber: z
       .string()
       .regex(
         /^01\d{9}$/,
         "Phone number must start with 01 and be exactly 11 digits"
-      ).optional(),
+      )
+      .optional(),
     cashReceivedBy: z.string().optional(),
   }),
 });
@@ -36,10 +39,11 @@ const paymentSchemaZod = z.object({
 // 🔹 Mongoose Payment Schema
 export interface IPaymentDoc extends Document {
   customerId: Schema.Types.ObjectId;
+  name: string;
   amount: number;
-  paymentMethod: "bank" | "bkash" | "nagad" | "cash";
   note: string;
   transactionDetails: {
+    paymentMethod: "bank" | "bkash" | "nagad" | "cash";
     transactionId: string;
     bankName: string;
     bkashNumber: string;
@@ -52,14 +56,15 @@ export interface IPaymentDoc extends Document {
 const paymentSchema = new Schema<IPaymentDoc>(
   {
     customerId: { type: Schema.Types.ObjectId, ref: "Customer" },
+    name: { type: String },
     amount: { type: Number, required: true },
-    paymentMethod: {
-      type: String,
-      enum: ["bank", "bkash", "nagad", "cash"],
-      required: true,
-    },
     note: { type: String },
     transactionDetails: {
+      paymentMethod: {
+        type: String,
+        enum: ["bank", "bkash", "nagad", "cash"],
+        required: true,
+      },
       transactionId: { type: String },
       bankName: { type: String },
       bkashNumber: { type: String },

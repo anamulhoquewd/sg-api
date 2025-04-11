@@ -178,6 +178,28 @@ export const getCustomerCountService = async () => {
   }
 };
 
+export const getCustomerIdsService = async () => {
+  try {
+    const data = await Customer.find().select("_id name");
+
+    return {
+      success: {
+        success: true,
+        message: "Fetched customer IDs",
+        data,
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
 export const registerCustomerService = async (body: ICustomer) => {
   //  Validate the data
   const customerSchemaZod = z.object({
@@ -315,9 +337,9 @@ export const getSingleCustomerService = async ({
   // Validate query
   const querySchema = z.object({
     sortBy: z
-      .enum(["createdAt", "updatedAt"])
+      .enum(["createdAt", "updatedAt", "date"])
       .optional()
-      .default(defaults.sortBy as "createdAt" | "updatedAt"),
+      .default(defaults.sortBy as "createdAt" | "updatedAt" | "date"),
     sortType: z
       .enum(["asc", "desc"])
       .optional()
@@ -354,7 +376,7 @@ export const getSingleCustomerService = async ({
     }
 
     // Validate sort field
-    const validSortFields = ["createdAt", "updatedAt"];
+    const validSortFields = ["createdAt", "updatedAt", "date"];
     const sortField = validSortFields.includes(queryValidation.data.sortBy)
       ? queryValidation.data.sortBy
       : "updatedAt";

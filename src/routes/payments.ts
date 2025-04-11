@@ -7,6 +7,11 @@ const payments = new Hono();
 // 🔹Get All payments (Only admin)
 payments.get("/", protect, authorize(["admin"]), (c) => payment.getPayments(c));
 
+// Count how many payment I have
+payments.get("/count", protect, authorize(["admin"]), (c) =>
+  payment.getPaymentCount(c)
+);
+
 // 🔹Get Single payment (Only admin)
 payments.get("/:id", protect, authorize(["admin"]), (c) =>
   payment.getSinglePayment(c)

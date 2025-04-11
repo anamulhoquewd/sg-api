@@ -13,7 +13,6 @@ import {
   resetPasswordService,
   changeAvatarService,
   getUserCountService,
-  
 } from "./users";
 import {
   getCustomersService,
@@ -23,14 +22,16 @@ import {
   regenerateAccessKeyService,
   deleteCustomerService,
   customerAccessService,
-  getCustomerCountService
+  getCustomerCountService,
+  getCustomerIdsService,
 } from "./customers";
 import {
   getOrdersService,
   registerOrderService,
   getSingleOrderService,
   updateOrderService,
-  deleteOrderService,getOrdersCountService
+  deleteOrderService,
+  getOrdersCountService,
 } from "./orders";
 import {
   deletePaymentService,
@@ -38,6 +39,7 @@ import {
   getSinglePaymentService,
   registerPaymentService,
   updatePaymentService,
+  getPaymentCountService,
 } from "./payments";
 
 export {
@@ -72,5 +74,8 @@ export {
   getPaymentsService,
   getSinglePaymentService,
   registerPaymentService,
-  updatePaymentService,getOrdersCountService
+  updatePaymentService,
+  getCustomerIdsService,
+  getOrdersCountService,
+  getPaymentCountService,
 };

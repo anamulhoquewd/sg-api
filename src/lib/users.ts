@@ -85,8 +85,8 @@ const generateAccessToken = async ({
       id: user._id,
       role: user.role,
       email: user.email,
-      // exp: Math.floor(Date.now() / 1000) + 60 * expMinutes,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 2,
+      exp: Math.floor(Date.now() / 1000) + 60 * expMinutes,
+      // exp: Math.floor(Date.now() / 1000) + 60,
     },
     JWT_ACCESS_SECRET
   );
@@ -111,8 +111,8 @@ const generateRefreshToken = async ({
       id: user._id,
       role: user.role,
       email: user.email,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 6,
-      // exp: Math.floor(Date.now() / 1000) + 60 * 2,
+      // exp: Math.floor(Date.now() / 1000) + 60 * 5,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * expDays,
     },
     JWT_REFRESH_SECRET
   );

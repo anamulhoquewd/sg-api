@@ -12,7 +12,7 @@ const customerSchemaZod = z
         /^01\d{9}$/,
         "Phone number must start with 01 and be exactly 11 digits"
       ),
-    address: z.string().min(2).max(50),
+    address: z.string().min(2).max(150),
     defaultItem: z.enum(["lunch", "dinner", "lunch&dinner"], {
       required_error: "Please select a default item",
     }),
@@ -23,9 +23,7 @@ const customerSchemaZod = z
       .number()
       .int()
       .positive({ message: "Quantity must be a positive integer" }),
-    defaultOffDays: z
-      .array(z.string())
-      .default([]),
+    defaultOffDays: z.array(z.string()).default([]),
     paymentStatus: z.enum(["paid", "partially_paid", "pending"], {
       required_error: "Please select a payment status",
     }),
@@ -52,7 +50,7 @@ const customerSchemaZod = z
 // 🔹 Mongoose Schema
 interface ICustomer extends z.infer<typeof customerSchemaZod> {}
 
-console.log()
+console.log();
 
 // 🔹 Mongoose Document
 interface ICustomerDoc extends Document {
@@ -62,7 +60,7 @@ interface ICustomerDoc extends Document {
   defaultItem: "lunch" | "dinner" | "lunch&dinner";
   defaultPrice: number;
   defaultQuantity: number;
-  defaultOffDays: "sa" | "su" | "mo" | "tu" | "we" | "th" | "fr";
+  defaultOffDays: ["sa" | "su" | "mo" | "tu" | "we" | "th" | "fr"];
   paymentStatus: "paid" | "partially_paid" | "pending";
   paymentSystem: "weekly" | "monthly";
   amount: number;

@@ -1,9 +1,6 @@
 import { Context } from "hono";
-import { Customer } from "../models";
 import { defaults } from "../config/defaults";
-import { z } from "zod";
 import { badRequestHandler, serverErrorHandler } from "../middlewares";
-import mongoose from "mongoose";
 import {
   deleteCustomerService,
   getCustomersService,
@@ -13,6 +10,7 @@ import {
   regenerateAccessKeyService,
   customerAccessService,
   getCustomerCountService,
+  getCustomerIdsService,
 } from "../services";
 
 // 🔹 Get All customers
@@ -32,7 +30,7 @@ const getCustomers = async (c: Context) => {
     sortType,
     sortBy,
     search,
-    active: activity
+    active: activity,
   });
 
   if (response.error) {
@@ -44,6 +42,16 @@ const getCustomers = async (c: Context) => {
   }
 
   return c.json(response.success);
+};
+
+const getCustomerIds = async (c: Context) => {
+  const response = await getCustomerIdsService();
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
 };
 
 // 🔹 Count how many users I have.
@@ -307,4 +315,5 @@ export {
   regenerateAccessKey,
   customerAccess,
   getCustomerCount,
+  getCustomerIds,
 };

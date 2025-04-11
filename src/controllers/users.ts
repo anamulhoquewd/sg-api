@@ -43,8 +43,7 @@ const getUsers = async (c: Context) => {
   const role = c.req.query("role") || "";
   const active = c.req.query("active");
 
-  const activity =
-    active === "false" ? false : active === "true" ? true : "";
+  const activity = active === "false" ? false : active === "true" ? true : "";
 
   const response = await getUsersService({
     page,
@@ -342,6 +341,7 @@ const logout = async (c: Context) => {
       200
     );
   } catch (error: any) {
+    console.log("Error :", error);
     return c.json(
       {
         success: false,

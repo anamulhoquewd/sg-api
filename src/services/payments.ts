@@ -4,7 +4,15 @@ import { Customer, Payment } from "../models";
 import { z } from "zod";
 import { defaults } from "../config/defaults";
 import idSchema from "../controllers/utils";
-import { schemaValidationError } from "./utile";
+import { schemaValidationError,calculatePercentage } from "./utile";
+import {
+  endOfMonth,
+  endOfYear,
+  startOfMonth,
+  startOfYear,
+  subMonths,
+  subYears,
+} from "date-fns";
 
 export const getPaymentsService = async (queryParams: {
   page: number;
@@ -68,9 +76,15 @@ export const getPaymentsService = async (queryParams: {
       .limit(limit);
 
     // Count total payments
-    const totalPayments: number = await Payment.countDocuments(query);
+    const totalPaymentsTransaction: number = await Payment.countDocuments(
+      query
+    );
 
-    const getPagination = pagination({ page, limit, total: totalPayments });
+    const getPagination = pagination({
+      page,
+      limit,
+      total: totalPaymentsTransaction,
+    });
 
     // Response
     return {
@@ -79,6 +93,107 @@ export const getPaymentsService = async (queryParams: {
         message: "Payments fetched successfully",
         data: payments,
         pagination: getPagination,
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
+export const getPaymentCountService = async () => {
+  try {
+    // 1. Current month's range (start and end of month)
+    const currentMonthStart = startOfMonth(new Date());
+    const currentMonthEnd = endOfMonth(new Date());
+
+    // 2. Previous month's range (start and end of last month)
+    const prevMonthStart = startOfMonth(subMonths(new Date(), 1));
+    const prevMonthEnd = endOfMonth(subMonths(new Date(), 1));
+
+    // 3. Current year's rang (start and end of last year)
+    const currentYearStart = startOfYear(new Date());
+    const currentYearEnd = endOfYear(new Date());
+
+    // 4. Previous year's rang (start and end of last year)
+    const prevYearStart = startOfYear(subYears(new Date(), 1));
+    const prevYearEnd = endOfYear(subYears(new Date(), 1));
+
+    // 5. Fetch counts using MongoDB queries
+    const [
+      currentMonthPayments,
+      prevMonthPayments,
+      currentYearPayments,
+      prevYearPayments,
+      totalPaymentsTransaction,
+      arrayOfAmounts,
+    ] = await Promise.all([
+      Payment.find({
+        createdAt: { $gte: currentMonthStart, $lte: currentMonthEnd },
+      }).select("amount"),
+      Payment.find({
+        createdAt: { $gte: prevMonthStart, $lte: prevMonthEnd },
+      }).select("amount"),
+      Payment.find({
+        createdAt: { $gte: currentYearStart, $lte: currentYearEnd },
+      }).select("amount"),
+      Payment.find({
+        createdAt: { $gte: prevYearStart, $lte: prevYearEnd },
+      }).select("amount"),
+      Payment.countDocuments({}),
+      Payment.find().select("amount"),
+    ]);
+
+    const totalAmounts = arrayOfAmounts.reduce(
+      (acc, curr) => acc + curr.amount,
+      0
+    );
+    const thisMonthAmounts = currentMonthPayments.reduce(
+      (acc, curr) => acc + curr.amount,
+      0
+    );
+    const prevMonthAmounts = prevMonthPayments.reduce(
+      (acc, curr) => acc + curr.amount,
+      0
+    );
+    const thisYearAmounts = currentYearPayments.reduce(
+      (acc, curr) => acc + curr.amount,
+      0
+    );
+    const prevYearAmounts = prevYearPayments.reduce(
+      (acc, curr) => acc + curr.amount,
+      0
+    );
+
+    const monthlyTransactionPercent = calculatePercentage(
+      thisMonthAmounts,
+      prevMonthAmounts
+    );
+
+    const yearlyTransactionPercent = calculatePercentage(
+      thisYearAmounts,
+      prevYearAmounts
+    );
+
+    return {
+      success: {
+        success: true,
+        message: "Customers Counted",
+        data: {
+          totalTransactions: totalPaymentsTransaction,
+          thisMonthAmounts,
+          prevMonthAmounts,
+          thisYearAmounts,
+          prevYearAmounts,
+          monthlyTransaction: `${monthlyTransactionPercent}%`,
+          yearlyTransaction: `${yearlyTransactionPercent}%`,
+          totalAmounts,
+        },
       },
     };
   } catch (error: any) {
@@ -274,8 +389,20 @@ export const registerPaymentService = async (body: {
       paymentMethod: z.enum(["bank", "bkash", "nagad", "cash"]),
       transactionId: z.string().optional(),
       bankName: z.string().optional(),
-      bkashNumber: z.string().optional(),
-      nagadNumber: z.string().optional(),
+      bkashNumber: z
+        .string()
+        .regex(
+          /^01\d{9}$/,
+          "Phone number must start with 01 and be exactly 11 digits"
+        )
+        .optional(),
+      nagadNumber: z
+        .string()
+        .regex(
+          /^01\d{9}$/,
+          "Phone number must start with 01 and be exactly 11 digits"
+        )
+        .optional(),
       cashReceivedBy: z.string().optional(),
       note: z.string().optional(),
     })
@@ -383,7 +510,10 @@ export const registerPaymentService = async (body: {
       nagadNumber?: string;
       cashReceivedBy?: string;
       transactionId?: string;
-    } = {};
+      paymentMethod: string;
+    } = {
+      paymentMethod: paymentMethod,
+    };
 
     // Set transaction details based on payment method
     if (paymentMethod === "bank") {
@@ -405,8 +535,8 @@ export const registerPaymentService = async (body: {
     // Register payment
     const payment = new Payment({
       customerId,
+      name: customer.name,
       amount,
-      paymentMethod,
       note,
       transactionDetails,
     });

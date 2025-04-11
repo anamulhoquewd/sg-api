@@ -4,15 +4,11 @@ import mongoose from "mongoose";
 import { Customer, Order } from "../models";
 import { pagination } from "../lib";
 import idSchema from "../controllers/utils";
-import { schemaValidationError } from "./utile";
-import { calculatePercentage } from "../utils";
+import { schemaValidationError, calculatePercentage } from "./utile";
 import {
-  addDays,
   endOfDay,
   endOfMonth,
   endOfYear,
-  format,
-  getMonth,
   startOfDay,
   startOfMonth,
   startOfYear,
@@ -90,10 +86,6 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
       dateFilter.$lte = new Date(queryValidation.data.toDate);
     }
 
-    console.log("Date Range Date: ", queryValidation.data.date);
-    console.log("Date Range From date: ", queryValidation.data.fromDate);
-    console.log("Date Range To date: ", queryValidation.data.toDate);
-
     // Query
     const query = {
       $or: [
@@ -161,8 +153,44 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
   }
 };
 
-export const getOrdersCountService = async () => {
+export const getOrdersCountService = async ({ id }: { id: string }) => {
+  const querySchema = z.object({
+    id: z
+      .string()
+      .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+        message: "Invalid MongoDB Order ID format",
+      })
+      .nullish(),
+  });
+
+  // Safe Parse for better error handling
+  const queryValidation = querySchema.safeParse({
+    id,
+  });
+  if (!queryValidation.success) {
+    return {
+      error: schemaValidationError(
+        queryValidation.error,
+        "Invalid query parameters"
+      ),
+    };
+  }
+
   try {
+    // If a customer ID is provided, return only their total orders
+    if (queryValidation.data?.id) {
+      const totalOrders = await Order.countDocuments({
+        customerId: queryValidation.data.id,
+      });
+      return {
+        success: {
+          success: true,
+          message: "Orders counted",
+          data: { totalOrders },
+        },
+      };
+    }
+
     // 1. Today's range (start and end of day)
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
@@ -237,7 +265,6 @@ export const getOrdersCountService = async () => {
           dailyChange: `${dailyChangePercent}%`,
           monthlyChange: `${monthlyChangePercent}%`,
           yearlyChange: `${yearlyChangePercent}%`,
-
           todayOrders,
           yesterdayOrders,
           currentMonthOrders,

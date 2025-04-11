@@ -9,6 +9,9 @@ customers.get("/", protect, (c) => customer.getCustomers(c));
 // 🔹 Count how many users I have.
 customers.get("/count", protect, (c) => customer.getCustomerCount(c));
 
+// 🔹 Get all customer's IDs.
+customers.get("/ids", protect, (c) => customer.getCustomerIds(c));
+
 // 🔹 Create new customer (Private)
 customers.post("/auth/register", protect, (c) => customer.registerCustomer(c));
 

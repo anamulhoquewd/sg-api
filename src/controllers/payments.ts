@@ -6,7 +6,7 @@ import {
   getPaymentsService,
   getSinglePaymentService,
   registerPaymentService,
-  updatePaymentService,
+  updatePaymentService,getPaymentCountService
 } from "../services";
 
 // 🔹 Get all payments
@@ -28,6 +28,16 @@ const getPayments = async (c: Context) => {
   if (response.error) {
     return badRequestHandler(c, response.error);
   }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
+};
+
+const getPaymentCount = async (c: Context) => {
+  const response = await getPaymentCountService();
 
   if (response.serverError) {
     return serverErrorHandler(c, response.serverError);
@@ -111,4 +121,5 @@ export {
   registerPayment,
   updatePayment,
   deletePayment,
+  getPaymentCount,
 };
