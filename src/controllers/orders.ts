@@ -53,7 +53,7 @@ const getOrders = async (c: Context) => {
 
 // 🔹 Count how many orders I have.
 const getOrderCount = async (c: Context) => {
-  const id = c.req.query("customerId") || null;
+  const id = c.req.query("customerId") || "";
 
   const response = await getOrdersCountService({
     id,

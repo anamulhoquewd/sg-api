@@ -6,7 +6,8 @@ import idSchema from "../controllers/utils";
 import { schemaValidationError } from "./utile";
 
 // Customer interface
-interface ICustomer {
+export interface ICustomer {
+  _id: string;
   name: string;
   phone: string;
   address: string;

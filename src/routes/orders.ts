@@ -9,16 +9,16 @@ orders.get("/", protect, (c) => order.getOrders(c));
 // 
 orders.get("/count", protect, (c) => order.getOrderCount(c));
 
-// 🔹 Create User (Private)
+// 🔹 Create Order (Private)
 orders.post("/", protect, (c) => order.registerOrder(c));
 
-// 🔹 Get Single User (Private)
+// 🔹 Get Single Order (Private)
 orders.get("/:id", protect, (c) => order.getSingleOrder(c));
 
-// 🔹 Update User (Private)
+// 🔹 Update Order (Private)
 orders.put("/:id", protect, (c) => order.updateOrder(c));
 
-// 🔹 Delete User (Only admin)
+// 🔹 Delete Order (Only admin)
 orders.delete("/:id", protect, authorize(["admin"]), (c) =>
   order.deleteOrder(c)
 );
