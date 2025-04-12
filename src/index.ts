@@ -44,7 +44,7 @@ app.use(
   })
 );
 
-// ⏰ Start the scheduler every day at 07:00
+// 🕖 Start the scheduler every day at 07:00
 startAutoOrderScheduler();
 
 // 🔹 Health check
