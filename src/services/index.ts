@@ -1,29 +1,23 @@
 import { reGenerateS3AccessKey } from "./s3";
 import {
-  getUsersService,
-  registerUserService,
-  getSingleUserService,
-  updateUserService,
-  updateProfileService,
+  getAdminsService,
+  registerAdminService,
+  getSingleAdminService,
   superAdminService,
   loginService,
-  deleteUserService,
+  deleteAdminService,
   changePasswordService,
   forgotPasswordService,
   resetPasswordService,
   changeAvatarService,
-  getUserCountService,
-} from "./users";
+  updateMeService,
+} from "./admins";
 import {
   getCustomersService,
   registerCustomerService,
   getSingleCustomerService,
   updateCustomerService,
-  regenerateAccessKeyService,
   deleteCustomerService,
-  customerAccessService,
-  getCustomerCountService,
-  getCustomerIdsService,
 } from "./customers";
 import {
   getOrdersService,
@@ -42,18 +36,23 @@ import {
   getPaymentCountService,
 } from "./payments";
 
+import {
+  getCategoryService,
+  registerCategoryService,
+  getSingleCategoryService,
+  updateCategoryService,
+  deleteCategoryService,
+} from "./categories";
+
 export {
   reGenerateS3AccessKey,
-  getUsersService,
-  getUserCountService,
-  registerUserService,
-  getSingleUserService,
-  updateUserService,
-  updateProfileService,
+  getAdminsService,
+  registerAdminService,
+  getSingleAdminService,
+  updateMeService,
   loginService,
   superAdminService,
-  deleteUserService,
-  getCustomerCountService,
+  deleteAdminService,
   changePasswordService,
   forgotPasswordService,
   resetPasswordService,
@@ -63,8 +62,6 @@ export {
   getSingleCustomerService,
   updateCustomerService,
   deleteCustomerService,
-  regenerateAccessKeyService,
-  customerAccessService,
   getOrdersService,
   registerOrderService,
   getSingleOrderService,
@@ -75,7 +72,11 @@ export {
   getSinglePaymentService,
   registerPaymentService,
   updatePaymentService,
-  getCustomerIdsService,
   getOrdersCountService,
   getPaymentCountService,
+  getCategoryService,
+  registerCategoryService,
+  getSingleCategoryService,
+  updateCategoryService,
+  deleteCategoryService,
 };

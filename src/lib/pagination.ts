@@ -1,21 +1,32 @@
 import { defaults } from "../config/defaults";
 
-// 🔹 Pagination
+// Interface of props
+interface PaginationProps {
+  page: number;
+  limit: number;
+  total: number;
+}
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  nextPage?: number;
+  prevPage?: number;
+}
+
+// Pagination
 const pagination = ({
   page = defaults.page,
   limit = defaults.limit,
   total,
-}: {
-  page: number;
-  limit: number;
-  total: number;
-}) => {
+}: PaginationProps): Pagination => {
   const totalPages = Math.ceil(total / limit);
 
-  const pagination: any = {
+  const pagination: Pagination = {
     page,
     limit,
-    total: total,
+    total,
     totalPages,
   };
 

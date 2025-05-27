@@ -1,6 +1,8 @@
-import User from "./User";
-import Customer from "./Customer";
-import Payment from "./Payment";
-import Order from "./Order";
+import Category from "./Categories";
+import Customer from "./Customers";
+import Order from "./Orders";
+import Payment from "./Payments";
+import Product from "./Products";
+import Admin from "./Admins";
 
-export { User, Customer, Payment, Order };
+export { Admin, Customer, Payment, Order, Product, Category };

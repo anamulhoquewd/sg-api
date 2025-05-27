@@ -6,23 +6,24 @@ import { cors } from "hono/cors";
 import { prettyJSON } from "hono/pretty-json";
 import { logger } from "hono/logger";
 import { notFound, protect } from "./middlewares";
-import { users, customers, orders, payments } from "./routes";
-import { user } from "./controllers";
+import { admins, customers, orders, payments } from "./routes";
+import { admin } from "./controllers";
 import { superAdminService } from "./services";
 import { startAutoOrderScheduler } from "./services/orders";
+import categories from "./routes/categories";
 
 config();
 
 const app = new Hono().basePath("/api/v1");
 
-// 🔹 Config MongoDB
+// Config MongoDB
 connectDB()
   .then(async () => {
     // Call the Super Admin Service function after connecting to MongoDB
     const result = await superAdminService();
 
     if (result.success) {
-      console.log(result.message || "Super created successfully!");
+      console.log(result.message || "Super admin created successfully!");
     } else {
       console.log(result.error?.message);
     }
@@ -31,13 +32,13 @@ connectDB()
     console.error("Failed to initialize super admin:", error);
   });
 
-// 🔹 Initialize middlewares
+// Initialize middlewares
 app.use("*", logger(), prettyJSON());
 
-// 🔹 Cors
+// CORS
 app.use(
   cors({
-    origin: "http://localhost:3000", // Your frontend URL
+    origin: "*", // Your frontend URL
     credentials: true, // Allow cookies
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"], // Ensure OPTIONS is handled
     allowHeaders: ["Content-Type", "Authorization"], // Allow necessary headers
@@ -47,25 +48,25 @@ app.use(
 // 🕖 Start the scheduler every day at 07:00
 startAutoOrderScheduler();
 
-// 🔹 Health check
+// Health check
 app.get("/health", (c) => c.text("API is healthy!"));
 
-// 🔹 Users Routes
-app.route("/users", users);
+// Admins Routes
+app.route("/admins", admins);
 
-// 🔹 Customers Routes
+// Categories Routes
+app.route("/categories", categories);
+
+// Customers Routes
 app.route("/customers", customers);
 
-// 🔹 Orders Routes
+// Orders Routes
 app.route("/orders", orders);
 
-// 🔹 Payments Routes
+// Payments Routes
 app.route("/payments", payments);
 
-// 🔹 Get me
-app.get("/auth/me", protect, (c) => user.getMe(c));
-
-// 🔹 Global Error Handler
+// Global Error Handler
 app.onError((error: any, c) => {
   console.error("error: ", error);
   return c.json(
@@ -78,7 +79,7 @@ app.onError((error: any, c) => {
   );
 });
 
-// 🔹 Not Found Handler
+// Not Found Handler
 app.notFound((c) => {
   const error = notFound(c);
   return error;

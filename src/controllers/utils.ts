@@ -9,7 +9,7 @@ const idSchema = z.object({
       val instanceof mongoose.Types.ObjectId ? val.toString() : val
     )
     .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-      message: "Invalid MongoDB User ID format",
+      message: "Invalid MongoDB Document ID format",
     }),
 });
 

@@ -17,15 +17,15 @@ export const serverErrorHandler = (c: Context, error: any) => {
 export const badRequestHandler = (
   c: Context,
   {
-    msg = "Bad Request",
+    message = "Bad Request",
     fields = [],
-  }: { msg?: string; fields?: Array<{ name: string; message: string }> }
+  }: { message?: string; fields?: Array<{ name: string; message: string }> }
 ) => {
   return c.json(
     {
       success: false,
       error: {
-        message: msg,
+        message: message,
         code: 400,
       },
       fields: fields.length > 0 ? fields : null,
@@ -38,15 +38,15 @@ export const badRequestHandler = (
 export const conflictHandler = (
   c: Context,
   {
-    msg = "Conflict",
+    message = "Conflict",
     fields = [],
-  }: { msg?: string; fields?: Array<{ name: string; message: string }> }
+  }: { message?: string; fields?: Array<{ name: string; message: string }> }
 ) => {
   return c.json(
     {
       success: false,
       error: {
-        message: msg,
+        message: message,
         code: 409,
       },
       fields,
@@ -69,13 +69,13 @@ export const notFound = (c: Context) => {
 // 🔹 Authentication Error Handler
 export const authenticationError = (
   c: Context,
-  msg = "Authentication Failed"
+  message = "Authentication Failed"
 ) => {
   return c.json(
     {
       success: false,
       error: {
-        message: msg,
+        message: message,
         code: 401,
       },
     },
@@ -84,12 +84,15 @@ export const authenticationError = (
 };
 
 // 🔹 Authorization Error Handler
-export const authorizationError = (c: Context, msg = "Permission Denied") => {
+export const authorizationError = (
+  c: Context,
+  message = "Permission Denied"
+) => {
   return c.json(
     {
       success: false,
       error: {
-        message: msg,
+        message: message,
         code: 403,
       },
     },

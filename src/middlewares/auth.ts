@@ -1,13 +1,13 @@
 import { Context, Next } from "hono";
 import { authenticationError, authorizationError } from "./errors";
 import { verify } from "hono/jwt";
-import { User } from "../models";
+import { Admin } from "../models";
 import { config } from "dotenv";
 config();
 
 const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET as string;
 
-// 🔹 Check if user is authenticated
+// 🔹 Check if admin is authenticated
 export const protect = async (c: Context, next: Next) => {
   const token = c.req.header("Authorization")?.replace("Bearer ", "");
 
@@ -18,35 +18,29 @@ export const protect = async (c: Context, next: Next) => {
   try {
     const { id } = await verify(token, JWT_ACCESS_SECRET);
 
-    const user = await User.findById(id).select("-password -refresh");
+    const admin = await Admin.findById(id).select("-password -refresh");
 
-    if (!user) {
+    if (!admin) {
       return authenticationError(c);
     }
 
-    c.set("user", user);
+    c.set("admin", admin);
     return next();
   } catch (error) {
     return authenticationError(c);
   }
 };
 
-// 🔹 Check if this user is admin or not
-export const authorize =
-  (roles: Array<"admin" | "manager" | "super_admin"> = ["super_admin"]) =>
-  async (c: Context, next: Next) => {
-    const user = c.get("user");
-    if (!user) {
-      return authenticationError(c);
-    }
+// 🔹 Check if this admin is admin or not
+export const authorize = () => async (c: Context, next: Next) => {
+  const admin = c.get("admin");
+  if (!admin) {
+    return authenticationError(c);
+  }
 
-    if (user.role === "super_admin") {
-      return next();
-    }
+  if (admin.role === "super_admin") {
+    return next();
+  }
 
-    if (roles.includes(user.role)) {
-      return next();
-    }
-
-    return authorizationError(c);
-  };
+  return authorizationError(c);
+};
