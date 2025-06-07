@@ -7,3 +7,5 @@
 - age upload api a hit korbe images and slug diye.
 - upload api urls return korbe.
 - urls niye update media api te hit korbe.
+
+(Eider por ei kaj tai age korte hobe.)
