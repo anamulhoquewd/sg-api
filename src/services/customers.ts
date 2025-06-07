@@ -2,9 +2,9 @@ import { z } from "zod";
 import { defaults } from "../config/defaults";
 import { Customer, Order, Payment } from "../models";
 import { pagination } from "../lib";
-import idSchema from "../controllers/utils";
+import idSchema from "../utils/utils";
 import { schemaValidationError } from "./utile";
-import { CustomerDocument } from "../models/Customers";
+import { CustomerDocument, customerZodValidation } from "../models/Customers";
 
 export const getCustomersService = async (queryParams: {
   page: number;
@@ -89,21 +89,13 @@ export const getCustomersService = async (queryParams: {
   }
 };
 
-export const registerCustomerService = async (body: CustomerDocument) => {
-  //  Validate the data
-  const customerSchemaZod = z.object({
-    name: z.string().min(3).max(50),
-    phone: z
-      .string()
-      .regex(
-        /^01\d{9}$/,
-        "Phone number must start with 01 and be exactly 11 digits"
-      ),
-    address: z.string().max(100),
-  });
-
+export const registerCustomerService = async (body: {
+  name: string;
+  phone: string;
+  address: string;
+}) => {
   // Validate the data
-  const bodyValidation = customerSchemaZod.safeParse(body);
+  const bodyValidation = customerZodValidation.safeParse(body);
   if (!bodyValidation.success) {
     return {
       error: schemaValidationError(
@@ -122,7 +114,7 @@ export const registerCustomerService = async (body: CustomerDocument) => {
     if (existingCustomer) {
       return {
         error: {
-          msg: "Customer already exists",
+          message: "Customer already exists",
           fields: [
             {
               name: "phone",
@@ -258,7 +250,7 @@ export const updateCustomerService = async ({
       return {
         success: {
           success: true,
-          msg: "Customer not found with the provided ID",
+          message: "No updates provided, returning existing customer",
           data: customer,
         },
       };

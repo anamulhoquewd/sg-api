@@ -1,32 +1,20 @@
 import mongoose, { model, Schema } from "mongoose";
-import { z } from "zod";
+import { optional, z } from "zod";
 
 // Product Interface
+export interface ProductDiscunt {
+  discountType: "percentage" | "flat";
+  discountValue: number;
+  discountExp: Date;
+}
+
 export interface ProductUnit {
-  unit: "kg" | "piece";
+  unitType: "kg" | "piece";
   price: number;
   originalPrice?: number;
   costPerItem: number;
-  quantity: number;
-  season?: {
-    start: Date;
-    end: Date;
-  };
-  averageWeightPerFruit?: {
-    start: string;
-    end: string;
-  };
-  discount?: {
-    type: "percentage" | "flat";
-    value: number;
-    duration?: {
-      start: Date;
-      end: Date;
-    };
-    maxLimitPerUser?: number;
-    minPurchaseQty?: number;
-    isActive: boolean;
-  };
+  stockQuantity: number;
+  averageWeightPerFruit?: string;
 }
 
 export interface ProductDocument extends Document {
@@ -36,70 +24,80 @@ export interface ProductDocument extends Document {
   origin?: string;
   shortDescription?: string;
   longDescription?: string;
+  season?: string;
   media: { alt: string; url: string }[];
   status: "inStock" | "lowStock" | "outOfStock";
   visibility: boolean;
-  popular: boolean;
+  isPopular: boolean;
   lowStockThreshold: number;
   unit: ProductUnit;
+  discount?: ProductDiscunt;
   category: Schema.Types.ObjectId;
 }
 
 // Product validation with zod
-const productZodValidation = z.object({
-  slug: z.string(),
-  name: z.string(),
-  title: z.string(),
+export const productZodValidation = z.object({
+  slug: z
+    .string()
+    .regex(
+      /^[a-z0-9]+(-[a-z0-9]+)*$/,
+      "Slug must be lowercase letters, numbers, and hyphens only (no spaces or special characters)."
+    ),
+  name: z
+    .string()
+    .min(5, { message: "Product name must be at least 5 characters." }),
+  title: z
+    .string()
+    .min(10, { message: "Product title must be at least 10 characters." })
+    .optional(),
+  shortDescription: z
+    .string()
+    .min(20, { message: "Short description must be at least 20 characters." })
+    .optional(),
+  longDescription: z
+    .string()
+    .min(50, { message: "Long description must be at least 50 characters." })
+    .optional(),
   origin: z.string().optional(),
-  shortDescription: z.string().optional(),
-  longDescription: z.string().optional(),
-  media: z.array(z.object({ alt: z.string(), url: z.string() })),
-  status: z.enum(["inStock", "lowStock", "outOfStock"]),
-  visibility: z.boolean().default(true),
-  popular: z.boolean().default(false),
-  lowStockThreshold: z.number().default(20),
+
   category: z
-    .any()
-    .transform((val) =>
-      val instanceof mongoose.Types.ObjectId ? val.toString() : val
-    )
-    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-      message: "Invalid MongoDB Document ID format",
-    }),
+    .string()
+    .length(24, { message: "Invalid category ID" })
+    .regex(/^[a-fA-F0-9]{24}$/, { message: "Invalid ObjectId format" }),
+  status: z.enum(["inStock", "lowStock", "outOfStock"]),
+  isPopular: z.boolean().default(false),
+  visibility: z.boolean().default(true),
+  season: z.string().optional(),
+
   unit: z.object({
-    unit: z.enum(["kg", "piece"]),
-    price: z.number().nonnegative(),
-    originalPrice: z.number().nonnegative().optional(),
-    costPerItem: z.number().nonnegative().optional(),
-    quantity: z.number().nonnegative(),
-    season: z
-      .object({
-        start: z.date(),
-        end: z.date(),
-      })
+    unitType: z.enum(["kg", "piece"]),
+    averageWeightPerFruit: z.string(),
+    originalPrice: z.coerce
+      .number()
+      .positive({ message: "Original Price must be a positive number." }),
+    costPerItem: z.coerce
+      .number()
+      .nonnegative({ message: "Cost must be a non-negative number." })
       .optional(),
-    averageWeightPerFruit: z
-      .object({
-        start: z.string(),
-        end: z.string(),
-      })
-      .optional(),
+    stockQuantity: z.coerce.number().nonnegative({
+      message: "Stock quantity must be a non-negative number.",
+    }),
   }),
+
+  lowStockThreshold: z.coerce.number().nonnegative().default(20),
+  averageWeightPerFruit: z.string().optional(),
+
   discount: z
     .object({
-      type: z.enum(["percentage", "flat"]),
-      value: z.number(),
-      duration: z
-        .object({
-          start: z.date(),
-          end: z.date(),
-        })
-        .optional(),
-      maxLimitPerCustomer: z.number().optional(),
-      minPurchaseQty: z.number().optional(),
+      discountType: z.enum(["flat", "percentage"]).optional(),
+      discountValue: z.coerce.number().optional(),
+      discountExp: z.coerce.date().optional(), // be sure it's passed as Date or a parsable string
     })
     .optional(),
-  isActive: z.boolean(),
+
+  media: z
+    .array(z.object({ url: z.string().url(), alt: z.string() }))
+    .min(1, { message: "At least one media URL is required." }),
 });
 
 // Product Schema
@@ -111,67 +109,66 @@ const productSchema = new Schema<ProductDocument>(
     origin: { type: String },
     shortDescription: { type: String },
     longDescription: { type: String },
-    media: [{ alt: String, url: String }],
+    media: [{ alt: String, url: String, _id: false }],
     status: {
       type: String,
       enum: ["inStock", "lowStock", "outOfStock"],
       required: true,
+      default: "inStock",
     },
     visibility: { type: Boolean, default: true },
-    popular: { type: Boolean, default: false },
+    season: { type: String },
+    isPopular: { type: Boolean, default: false },
     lowStockThreshold: { type: Number, default: 20 },
     unit: {
-      unit: { type: String, enum: ["kg", "piece"], required: true },
-      price: { type: Number, required: true },
-      originalPrice: { type: Number },
+      unitType: { type: String, enum: ["kg", "piece"], required: true },
+      price: { type: Number },
+      originalPrice: { type: Number, require: true },
       costPerItem: { type: Number, required: true },
-      quantity: { type: Number, required: true },
-      season: {
-        start: Date,
-        end: Date,
+      stockQuantity: { type: Number, required: true },
+      averageWeightPerFruit: { type: String },
+    },
+    discount: {
+      discountType: {
+        type: String,
+        enum: ["percentage", "flat"],
       },
-      averageWeightPerFruit: {
-        start: String,
-        end: String,
-      },
-      discount: {
-        type: {
-          type: String,
-          enum: ["percentage", "flat"],
-        },
-        value: Number,
-        duration: {
-          start: Date,
-          end: Date,
-        },
-        maxLimitPerUser: Number,
-        minPurchaseQty: Number,
-        isActive: { type: Boolean, default: true },
-      },
+      discountValue: { type: Number },
+      discountExp: { type: Date },
     },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
   },
   { timestamps: true }
 );
 
-// Middleware: Validate with Zod before saving
-productSchema.pre("save", function (next) {
-  const validation = this.isNew
-    ? productZodValidation.safeParse(this.toObject())
-    : productZodValidation.partial().safeParse(this.toObject());
+// Middleware: Update price based on original price and descunt.
+// productSchema.pre("save", function (this: ProductDocument, next) {
+//   const currentDate = new Date();
+//   const expirationDate = this.discount?.discountExp
+//     ? new Date(this.discount.discountExp)
+//     : new Date();
+//   if (
+//     currentDate < expirationDate &&
+//     this.unit.originalPrice &&
+//     this.discount?.discountValue
+//   ) {
+//     let discountAmount = 0;
 
-  if (!validation.success) {
-    console.log(`Error on field: ${validation.error.issues[0].path[0]}`);
-    console.log(
-      validation.error.issues.map((issue) => {
-        console.log(issue.message);
-        console.log(issue.path[0]);
-      })
-    );
-    return next(new Error(validation.error.issues[0].message));
-  }
-  next();
-});
+//     this.discount.discountType === "flat"
+//       ? (discountAmount = this.discount.discountValue)
+//       : this.discount.discountType === "percentage"
+//       ? (discountAmount =
+//           this.unit.originalPrice * (this.discount.discountValue / 100))
+//       : (discountAmount = 0);
+
+//     this.unit.price = this.unit.originalPrice - discountAmount;
+//   } else {
+//     this.unit.price = this.unit.originalPrice || this.unit.price;
+//   }
+
+//   next();
+// });
+
 const ProductModel = model<ProductDocument>("Product", productSchema);
 
 export default ProductModel;

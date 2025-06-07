@@ -5,6 +5,7 @@ interface DefaultsValues {
   sortType: string;
   sortBy: string;
   search: string;
+  productStatus: string;
 }
 
 // Default values
@@ -14,6 +15,7 @@ const defaults: DefaultsValues = {
   sortType: "desc",
   sortBy: "updatedAt",
   search: "",
+  productStatus: "",
 };
 
 export default Object.freeze(defaults);

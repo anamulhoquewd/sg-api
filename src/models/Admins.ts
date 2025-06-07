@@ -21,8 +21,8 @@ export interface AdminDocument extends Document {
 }
 
 // Admin Validation with zod
-const adminZodValidation = z.object({
-  name: z.string().min(2).max(50),
+export const adminZodValidation = z.object({
+  name: z.string().min(3).max(50),
   email: z.string().email(),
   phone: z
     .string()
@@ -30,13 +30,8 @@ const adminZodValidation = z.object({
       /^01\d{9}$/,
       "Phone number must start with 01 and be exactly 11 digits"
     ),
-  password: z.string(),
-  address: z.string().min(2).max(100).optional(),
-  role: z.enum(["admin", "super_admin"]),
-  avatar: z.string().optional(),
-  refresh: z.string().optional(),
-  resetPasswordToken: z.string().nullish(),
-  resetPasswordExpireDate: z.date().nullish(),
+  address: z.string().max(100, "Address must be less than 100 characters long"),
+  active: z.boolean().default(true),
 });
 
 //  Admin Schema
@@ -56,7 +51,7 @@ const adminSchema = new Schema<AdminDocument>(
   { timestamps: true }
 );
 
-// 🔹 Method to generate and hash reset token
+// Method to generate and hash reset token
 adminSchema.methods.generateResetPasswordToken = function (expMinutes = 30) {
   let resetToken = crypto.randomBytes(32).toString("hex");
 
@@ -72,12 +67,12 @@ adminSchema.methods.generateResetPasswordToken = function (expMinutes = 30) {
   return resetToken;
 };
 
-// 🔹 Match Admin entered password to hashed password in database
+// Match Admin entered password to hashed password in database
 adminSchema.methods.matchPassword = async function (enteredPassword: string) {
   return bcrypt.compare(enteredPassword, this.password);
 };
 
-// 🔹 Hash password
+// Hash password
 adminSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     // If password is not modified, skip hashing
@@ -94,26 +89,7 @@ adminSchema.pre("save", async function (next) {
   next();
 });
 
-// Middleware: Validate with Zod before saving
-adminSchema.pre("save", function (next) {
-  const validation = this.isNew
-    ? adminZodValidation.safeParse(this.toObject())
-    : adminZodValidation.partial().safeParse(this.toObject());
-
-  if (!validation.success) {
-    console.log(`Error on field: ${validation.error.issues[0].path[0]}`);
-    console.log(
-      validation.error.issues.map((issue) => {
-        console.log(issue.message);
-        console.log(issue.path[0]);
-      })
-    );
-    return next(new Error(validation.error.issues[0].message));
-  }
-  next();
-});
-
-// 🔹 Mongoose Admin model
+// Mongoose Admin model
 const Admin = model<AdminDocument>("Admin", adminSchema);
 
 export default Admin;

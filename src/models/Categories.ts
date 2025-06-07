@@ -10,11 +10,11 @@ export interface CategoryDocument extends Document {
 }
 
 // Category validatoin with zod
-const categoryZodValidation = z.object({
-  slug: z.string(),
-  name: z.string(),
-  shortDescription: z.string().optional(),
-  longDescription: z.string().optional(),
+export const categoryZodValidation = z.object({
+  slug: z.string().optional(),
+  name: z.string().optional(),
+  shortDescription: z.string().max(200).optional(),
+  longDescription: z.string().max(500).optional(),
 });
 
 // Category Schema
@@ -27,25 +27,6 @@ const categorySchema = new Schema<CategoryDocument>(
   },
   { timestamps: true }
 );
-
-// Middleware: Validate with Zod before saving
-categorySchema.pre("save", function (next) {
-  const validation = this.isNew
-    ? categoryZodValidation.safeParse(this.toObject())
-    : categoryZodValidation.partial().safeParse(this.toObject());
-
-  if (!validation.success) {
-    console.log(`Error on field: ${validation.error.issues[0].path[0]}`);
-    console.log(
-      validation.error.issues.map((issue) => {
-        console.log(issue.message);
-        console.log(issue.path[0]);
-      })
-    );
-    return next(new Error(validation.error.issues[0].message));
-  }
-  next();
-});
 
 const CategoryModel = model<CategoryDocument>("Category", categorySchema);
 

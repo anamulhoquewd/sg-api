@@ -3,8 +3,8 @@ import { pagination } from "../lib";
 import { Customer, Payment } from "../models";
 import { z } from "zod";
 import { defaults } from "../config/defaults";
-import idSchema from "../controllers/utils";
-import { schemaValidationError,calculatePercentage } from "./utile";
+import idSchema from "../utils/utils";
+import { schemaValidationError, calculatePercentage } from "./utile";
 import {
   endOfMonth,
   endOfYear,

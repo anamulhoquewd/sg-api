@@ -6,10 +6,9 @@ import { cors } from "hono/cors";
 import { prettyJSON } from "hono/pretty-json";
 import { logger } from "hono/logger";
 import { notFound, protect } from "./middlewares";
-import { admins, customers, orders, payments } from "./routes";
+import { admins, customers, orders, payments, products } from "./routes";
 import { admin } from "./controllers";
 import { superAdminService } from "./services";
-import { startAutoOrderScheduler } from "./services/orders";
 import categories from "./routes/categories";
 
 config();
@@ -38,15 +37,12 @@ app.use("*", logger(), prettyJSON());
 // CORS
 app.use(
   cors({
-    origin: "*", // Your frontend URL
+    origin: "http://localhost:3001", // Your frontend URL
     credentials: true, // Allow cookies
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"], // Ensure OPTIONS is handled
     allowHeaders: ["Content-Type", "Authorization"], // Allow necessary headers
   })
 );
-
-// 🕖 Start the scheduler every day at 07:00
-startAutoOrderScheduler();
 
 // Health check
 app.get("/health", (c) => c.text("API is healthy!"));
@@ -59,6 +55,9 @@ app.route("/categories", categories);
 
 // Customers Routes
 app.route("/customers", customers);
+
+// Products Routes
+app.route("/products", products);
 
 // Orders Routes
 app.route("/orders", orders);

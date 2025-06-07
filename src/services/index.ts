@@ -35,7 +35,6 @@ import {
   updatePaymentService,
   getPaymentCountService,
 } from "./payments";
-
 import {
   getCategoryService,
   registerCategoryService,
@@ -43,8 +42,34 @@ import {
   updateCategoryService,
   deleteCategoryService,
 } from "./categories";
+import {
+  registerProductService,
+  getProductsService,
+  getSingleProductSercive,
+  deleteProductService,
+  uploadMediaService,
+  updateUnitService,
+  updateOnlyCategoryService,
+  includesMediaUrlsService,
+  updateVisibilityService,
+  updateGeneralService,
+  deleteAndUpdateMediaService,
+  updateDiscountService,
+} from "./products";
 
 export {
+  updateUnitService,
+  deleteAndUpdateMediaService,
+  updateDiscountService,
+  updateOnlyCategoryService,
+  includesMediaUrlsService,
+  updateVisibilityService,
+  updateGeneralService,
+  registerProductService,
+  uploadMediaService,
+  deleteProductService,
+  getSingleProductSercive,
+  getProductsService,
   reGenerateS3AccessKey,
   getAdminsService,
   registerAdminService,

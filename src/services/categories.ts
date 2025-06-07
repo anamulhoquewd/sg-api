@@ -3,8 +3,8 @@ import { schemaValidationError } from "./utile";
 import { Category } from "../models";
 import { pagination } from "../lib";
 import { defaults } from "../config/defaults";
-import idSchema from "../controllers/utils";
-import { CategoryDocument } from "../models/Categories";
+import idSchema from "../utils/utils";
+import { CategoryDocument, categoryZodValidation } from "../models/Categories";
 
 export const registerCategoryService = async (body: CategoryDocument) => {
   // Validate Body
@@ -219,15 +219,7 @@ export const updateCategoryService = async ({
   }
 
   // Validate Body
-  const bodySchema = z.object({
-    slug: z.string().optional(),
-    name: z.string().optional(),
-    shortDescription: z.string().max(200).optional(),
-    longDescription: string().max(500).optional(),
-  });
-
-  // Validate Body
-  const bodyValidation = bodySchema.safeParse(body);
+  const bodyValidation = categoryZodValidation.safeParse(body);
   if (!bodyValidation.success) {
     return {
       error: schemaValidationError(

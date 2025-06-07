@@ -10,10 +10,10 @@ import {
   pagination,
   uploadAvatar,
 } from "../lib";
-import idSchema from "../controllers/utils";
+import idSchema from "../utils/utils";
 import { s3 } from "../config/S3";
 import { schemaValidationError } from "./utile";
-import { AdminDocument } from "../models/Admins";
+import { AdminDocument, adminZodValidation } from "../models/Admins";
 
 // Get environment variables
 const EMAIL_USER = process.env.EMAIL_USER
@@ -150,24 +150,8 @@ export const registerAdminService = async (body: {
   address: string;
   isActive: boolean;
 }) => {
-  // Validate Body
-  const bodySchema = z.object({
-    name: z.string().min(3).max(50),
-    email: z.string().email(),
-    phone: z
-      .string()
-      .regex(
-        /^01\d{9}$/,
-        "Phone number must start with 01 and be exactly 11 digits"
-      ),
-    address: z
-      .string()
-      .max(100, "Address must be less than 100 characters long"),
-    active: z.boolean().default(true),
-  });
-
   // Safe Parse for better error handling
-  const bodyValidation = bodySchema.safeParse(body);
+  const bodyValidation = adminZodValidation.safeParse(body);
 
   if (!bodyValidation.success) {
     return {
@@ -845,9 +829,12 @@ export const changeAvatarService = async ({
         message: "File size must be less than 2MB",
       })
       .refine(
-        (file) => ["image/jpeg", "image/png", "image/jpg"].includes(file.type),
+        (file) =>
+          ["image/jpeg", "image/png", "image/jpg", "image/webp"].includes(
+            file.type
+          ),
         {
-          message: "Only JPEG, JPG and PNG files are allowed",
+          message: "Only JPEG, JPG, PNG and WEBP files are allowed",
         }
       ),
   });

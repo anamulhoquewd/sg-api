@@ -36,6 +36,7 @@ const getCustomers = async (c: Context) => {
   return c.json(response.success);
 };
 
+// Register new customer
 const registerCustomer = async (c: Context) => {
   const body = await c.req.json();
 

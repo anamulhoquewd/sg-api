@@ -4,18 +4,18 @@ import { authorize, protect } from "../middlewares";
 const orders = new Hono();
 
 // Get All orders (Private)
-orders.get("/", protect, (c) => order.getOrders(c));
+orders.get("/", (c) => order.getOrders(c));
 
-// Create Order (Private)
+// Create Order (Public)
 orders.post("/", (c) => order.registerOrder(c));
 
 // Get Single Order (Private)
-orders.get("/:id", protect, (c) => order.getSingleOrder(c));
+orders.get("/:id", (c) => order.getSingleOrder(c));
 
 // Update Order (Private)
-orders.put("/:id", protect, (c) => order.updateOrder(c));
+orders.put("/:id", (c) => order.updateOrder(c));
 
-// Delete Order (Only admin)
-orders.delete("/:id", protect, authorize(), (c) => order.deleteOrder(c));
+// Delete Order (Private)
+orders.delete("/:id", authorize(), (c) => order.deleteOrder(c));
 
 export default orders;

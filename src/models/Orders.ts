@@ -7,7 +7,6 @@ export interface OrderDocument extends Document {
   items: {
     product: Schema.Types.ObjectId;
     quantity: number;
-    unit: "kg" | "piece";
   }[];
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   totalAmount: number;
@@ -16,7 +15,7 @@ export interface OrderDocument extends Document {
 }
 
 // Customers validation with zod
-const customerZodValidation = z.object({
+export const customerZodValidation = z.object({
   customer: z
     .any()
     .transform((val) =>
@@ -36,10 +35,8 @@ const customerZodValidation = z.object({
           message: "Invalid MongoDB Document ID format",
         }),
       quantity: z.number().min(1, "Quantity must be at least 1"),
-      unit: z.enum(["kg", "piece"]),
     })
   ),
-
   status: z.enum([
     "pending",
     "processing",
@@ -64,7 +61,6 @@ const orderSchema = new Schema<OrderDocument>(
           required: true,
         },
         quantity: { type: Number, required: true },
-        unit: { type: String, enum: ["kg", "piece"], required: true },
       },
     ],
     status: {
