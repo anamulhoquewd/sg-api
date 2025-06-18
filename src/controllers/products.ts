@@ -9,7 +9,7 @@ import {
   updateGeneralService,
   updateVisibilityService,
   updateOnlyCategoryService,
-  deleteAndUpdateMediaService,
+  deleteMediaService,
   includesMediaUrlsService,
   updateDiscountService,
 } from "../services";
@@ -92,9 +92,9 @@ const getProducts = async (c: Context) => {
 };
 
 const getSingleProduct = async (c: Context) => {
-  const id = c.req.param("id");
+  const slug = c.req.param("slug");
 
-  const response = await getSingleProductSercive(id);
+  const response = await getSingleProductSercive(slug);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -208,11 +208,11 @@ const includesMediaUrls = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const deleteAndUpdateMedia = async (c: Context) => {
+const deleteMedia = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await deleteAndUpdateMediaService({ body, id });
+  const response = await deleteMediaService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -254,5 +254,5 @@ export {
   updateGeneral,
   updateVisibility,
   includesMediaUrls,
-  deleteAndUpdateMedia,
+  deleteMedia,
 };

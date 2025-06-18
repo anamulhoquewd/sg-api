@@ -13,10 +13,10 @@ products.post("/register", (c) => product.registerProduct(c));
 products.post("/media", (c) => product.uploadMedia(c));
 
 // Get single product (Public)
-products.get("/:id", (c) => product.getSingleProduct(c));
+products.get("/:slug", (c) => product.getSingleProduct(c));
 
 // Delete media (Private)
-products.delete("/:id/media", (c) => product.deleteAndUpdateMedia(c));
+products.delete("/:id/media", (c) => product.deleteMedia(c));
 
 // Update product units (Private)
 products.patch("/:id/unit", (c) => product.updateUnit(c));

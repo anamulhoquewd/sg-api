@@ -6,7 +6,11 @@ import { defaults } from "../config/defaults";
 import { pagination } from "../lib";
 import idSchema from "../utils/utils";
 import { s3 } from "./../config/S3";
-import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  PutObjectCommand,
+  DeleteObjectsCommand,
+} from "@aws-sdk/client-s3";
 
 const AWS_BUCKET_NAME = (process.env.AWS_BUCKET_NAME as string) || "bucket";
 const AWS_REGION = (process.env.AWS_REGION as string) || "eu-north-1";
@@ -122,11 +126,11 @@ export const registerProductService = async (body: ProductDiscunt) => {
   }
 };
 
-export const deleteAndUpdateMediaService = async ({
-  body, //expects: "uploads/products/img1.jpg"
+export const deleteMediaService = async ({
+  body, //expects: ["https://ss.s3.e-7.amazonaws.com/products/801.jpeg"]
   id,
 }: {
-  body: { url: string };
+  body: { urls: string[] };
   id: string;
 }) => {
   if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY || !AWS_BUCKET_NAME) {
@@ -148,11 +152,10 @@ export const deleteAndUpdateMediaService = async ({
 
   // Url validation with zod
   const urlSchema = z.object({
-    url: z.string(),
+    urls: z.array(z.string()),
   });
 
-  const fileValidation = urlSchema.safeParse({ url: body.url });
-  console.log(fileValidation.error);
+  const fileValidation = urlSchema.safeParse({ urls: body.urls });
   if (!fileValidation.success) {
     return {
       error: schemaValidationError(
@@ -173,21 +176,27 @@ export const deleteAndUpdateMediaService = async ({
       };
     }
 
-    const url = new URL(fileValidation.data.url);
-    const key = url.pathname.startsWith("/")
-      ? url.pathname.slice(1)
-      : url.pathname; // "folder/image.jpg" (without the leading slash)
+    const keys = fileValidation.data.urls.map((key) => {
+      return new URL(key).pathname.startsWith("/")
+        ? new URL(key).pathname.slice(1) // "folder/image.jpg" (without the leading slash)
+        : new URL(key).pathname;
+    });
 
-    const command = new DeleteObjectCommand({
+    const command = new DeleteObjectsCommand({
       Bucket: AWS_BUCKET_NAME,
-      Key: key,
+      Delete: {
+        Objects: keys.map((key) => ({ Key: key })),
+        Quiet: false, // If true, no details are returned
+      },
     });
 
     await s3.send(command);
 
     if (product) {
       product.media =
-        product.media?.filter((i) => i.url !== url.toString()) || [];
+        product.media?.filter(
+          (i) => !fileValidation.data.urls.includes(i.url)
+        ) || [];
     }
 
     // Save updates
@@ -554,18 +563,28 @@ export const getProductsService = async (queryParams: {
   }
 };
 
-export const getSingleProductSercive = async (id: string) => {
-  // Validate ID
-  const idValidation = idSchema.safeParse({ id });
-  if (!idValidation.success) {
+export const getSingleProductSercive = async (slug: string) => {
+  const querySchema = z.object({
+    slug: z.string(),
+  });
+
+  const queryValidation = querySchema.safeParse({
+    slug,
+  });
+
+  // Return error if validation fails
+  if (!queryValidation.success) {
     return {
-      error: schemaValidationError(idValidation.error, "Invalid ID"),
+      error: schemaValidationError(
+        queryValidation.error,
+        "Invalid query parameters"
+      ),
     };
   }
 
   try {
     // Check if product exists
-    const product = await Product.findById(idValidation.data.id)
+    const product = await Product.findOne({ slug: queryValidation.data.slug })
       .populate("category")
       .exec();
 
@@ -1093,88 +1112,6 @@ export const updateVisibilityService = async ({
   }
 };
 
-interface UpdatMediaBody {
-  media: string[];
-}
-
-const updateMediaUrlService = async ({
-  id,
-  body,
-}: {
-  id: string;
-  body: UpdatMediaBody;
-}) => {
-  // Validate ID
-  const idValidation = idSchema.safeParse({ id });
-  if (!idValidation.success) {
-    return {
-      error: schemaValidationError(idValidation.error, "Invalid ID"),
-    };
-  }
-
-  try {
-    const updateUnitValuidationWithZod = z.object({
-      media: z.array(z.string()),
-    });
-
-    // Validate the data
-    const bodyValidation = updateUnitValuidationWithZod
-      .partial()
-      .safeParse(body);
-    if (!bodyValidation.success) {
-      return {
-        error: schemaValidationError(
-          bodyValidation.error,
-          "Invalid request body"
-        ),
-      };
-    }
-
-    // Check if product exists
-    const product = await Product.findById(idValidation.data.id);
-
-    if (!product) {
-      return {
-        error: {
-          message: "Product not found with the provided ID",
-        },
-      };
-    }
-
-    // Check if any field is provided
-    if (Object.keys(bodyValidation.data).length === 0) {
-      return {
-        success: {
-          success: true,
-          message: "No updates provided, returning existing product (media)",
-          data: product,
-        },
-      };
-    }
-
-    // Update only provided fields
-    Object.assign(product, bodyValidation.data);
-    const docs = await product.save();
-
-    // Response
-    return {
-      success: {
-        success: true,
-        message: "Product (Media) updated successfully",
-        data: docs,
-      },
-    };
-  } catch (error: any) {
-    return {
-      serverError: {
-        success: false,
-        message: error.message,
-        stack: process.env.NODE_ENV === "production" ? null : error.stack,
-      },
-    };
-  }
-};
-
 export const deleteProductService = async (id: string) => {
   // Validate ID
   const idValidation = idSchema.safeParse({ id });
@@ -1194,6 +1131,13 @@ export const deleteProductService = async (id: string) => {
         },
       };
     }
+
+    const extractUrl =
+      product?.media
+        ?.map((item) => item?.url)
+        .filter((url): url is string => !!url) || [];
+
+    deleteMediaService({ body: { urls: extractUrl }, id });
 
     // Delete product
     await product.deleteOne();

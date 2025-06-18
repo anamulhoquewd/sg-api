@@ -132,9 +132,10 @@ const productSchema = new Schema<ProductDocument>(
       discountType: {
         type: String,
         enum: ["percentage", "flat"],
+        default: "flat",
       },
-      discountValue: { type: Number },
-      discountExp: { type: Date },
+      discountValue: { type: Number, default: 0 },
+      discountExp: { type: Date, default: new Date() },
     },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
   },

@@ -53,13 +53,13 @@ import {
   includesMediaUrlsService,
   updateVisibilityService,
   updateGeneralService,
-  deleteAndUpdateMediaService,
+  deleteMediaService,
   updateDiscountService,
 } from "./products";
 
 export {
   updateUnitService,
-  deleteAndUpdateMediaService,
+  deleteMediaService,
   updateDiscountService,
   updateOnlyCategoryService,
   includesMediaUrlsService,
