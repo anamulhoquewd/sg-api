@@ -591,7 +591,7 @@ export const getSingleProductSercive = async (slug: string) => {
     if (!product) {
       return {
         error: {
-          message: "Product not found with the provided ID",
+          message: "Product not found with the provided slug",
         },
       };
     }

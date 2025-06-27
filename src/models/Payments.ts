@@ -55,25 +55,6 @@ const paymentSchema = new Schema<PaymentDocument>(
   { timestamps: true }
 );
 
-// Middleware: Validate with Zod before saving
-paymentSchema.pre("save", function (next) {
-  const validation = this.isNew
-    ? paymentZodValidation.safeParse(this.toObject())
-    : paymentZodValidation.partial().safeParse(this.toObject());
-
-  if (!validation.success) {
-    console.log(`Error on field: ${validation.error.issues[0].path[0]}`);
-    console.log(
-      validation.error.issues.map((issue) => {
-        console.log(issue.message);
-        console.log(issue.path[0]);
-      })
-    );
-    return next(new Error(validation.error.issues[0].message));
-  }
-  next();
-});
-
 const PaymentModel = model<PaymentDocument>("Payment", paymentSchema);
 
 export default PaymentModel;

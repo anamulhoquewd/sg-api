@@ -142,34 +142,6 @@ const productSchema = new Schema<ProductDocument>(
   { timestamps: true }
 );
 
-// Middleware: Update price based on original price and descunt.
-// productSchema.pre("save", function (this: ProductDocument, next) {
-//   const currentDate = new Date();
-//   const expirationDate = this.discount?.discountExp
-//     ? new Date(this.discount.discountExp)
-//     : new Date();
-//   if (
-//     currentDate < expirationDate &&
-//     this.unit.originalPrice &&
-//     this.discount?.discountValue
-//   ) {
-//     let discountAmount = 0;
-
-//     this.discount.discountType === "flat"
-//       ? (discountAmount = this.discount.discountValue)
-//       : this.discount.discountType === "percentage"
-//       ? (discountAmount =
-//           this.unit.originalPrice * (this.discount.discountValue / 100))
-//       : (discountAmount = 0);
-
-//     this.unit.price = this.unit.originalPrice - discountAmount;
-//   } else {
-//     this.unit.price = this.unit.originalPrice || this.unit.price;
-//   }
-
-//   next();
-// });
-
 const ProductModel = model<ProductDocument>("Product", productSchema);
 
 export default ProductModel;

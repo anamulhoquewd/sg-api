@@ -13,9 +13,9 @@ orders.post("/", (c) => order.registerOrder(c));
 orders.get("/:id", (c) => order.getSingleOrder(c));
 
 // Update Order (Private)
-orders.put("/:id", (c) => order.updateOrder(c));
+orders.patch("/:id", (c) => order.updateOrder(c));
 
 // Delete Order (Private)
-orders.delete("/:id", authorize(), (c) => order.deleteOrder(c));
+orders.delete("/:id", (c) => order.deleteOrder(c));
 
 export default orders;

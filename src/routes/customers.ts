@@ -5,7 +5,7 @@ import { authorize, protect } from "../middlewares";
 const customers = new Hono();
 
 // Get All customers (Private)
-customers.get("/", protect, (c) => customer.getCustomers(c));
+customers.get("/", (c) => customer.getCustomers(c));
 
 // Register new customer (Privet) - for test
 // customers.post("/", protect, (c) => customer.registerCustomer(c));

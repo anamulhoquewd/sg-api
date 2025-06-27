@@ -25,7 +25,6 @@ import {
   getSingleOrderService,
   updateOrderService,
   deleteOrderService,
-  getOrdersCountService,
 } from "./orders";
 import {
   deletePaymentService,
@@ -97,7 +96,6 @@ export {
   getSinglePaymentService,
   registerPaymentService,
   updatePaymentService,
-  getOrdersCountService,
   getPaymentCountService,
   getCategoryService,
   registerCategoryService,

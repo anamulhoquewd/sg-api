@@ -7,37 +7,70 @@ import {
   registerOrderService,
   updateOrderService,
   deleteOrderService,
-  getOrdersCountService,
 } from "../services";
 
-// 🔹Get all orders
+// et all orders
 const getOrders = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
-  const search = c.req.query("search") || defaults.search;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
-  const fromDate = c.req.query("fromDate")
-    ? new Date(c.req.query("fromDate") as string)
-    : null;
-  const toDate = c.req.query("toDate")
-    ? new Date(c.req.query("toDate") as string)
-    : null;
-  const date = c.req.query("date")
-    ? new Date(c.req.query("date") as string)
-    : null;
-  const customer = c.req.query("customer") || null;
+
+  const fromDate = c.req.query("fromDate") ?? undefined;
+  const toDate = c.req.query("toDate") ?? undefined;
+  const date = c.req.query("date") ?? undefined;
+
+  const customer = c.req.query("customer")?.trim() || undefined;
+  const product = c.req.query("product")?.trim() || undefined;
+
+  const search = c.req.query("search") || "";
+
+  const status = c.req.query("status")?.trim() as
+    | "pending"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled"
+    | "all"
+    | undefined;
+  const paymentStatus = c.req.query("paymentStatus")?.trim() as
+    | "paid"
+    | "unpaid"
+    | "all"
+    | undefined;
+
+  const maxAmountRaw = c.req.query("maxAmount");
+  const minAmountRaw = c.req.query("minAmount");
+
+  const maxAmount =
+    maxAmountRaw && !isNaN(Number(maxAmountRaw))
+      ? Number(maxAmountRaw)
+      : undefined;
+  const minAmount =
+    minAmountRaw && !isNaN(Number(minAmountRaw))
+      ? Number(minAmountRaw)
+      : undefined;
 
   const response = await getOrdersService({
     page,
     limit,
-    search,
     sortBy,
     sortType,
+
     toDate,
     fromDate,
     date,
+
     customer,
+    product,
+
+    search,
+
+    paymentStatus: paymentStatus === "all" ? undefined : paymentStatus,
+    status: status === "all" ? undefined : status,
+
+    maxAmount,
+    minAmount,
   });
 
   if (response.error) {
@@ -51,22 +84,7 @@ const getOrders = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-// 🔹 Count how many orders I have.
-const getOrderCount = async (c: Context) => {
-  const id = c.req.query("customerId") || "";
-
-  const response = await getOrdersCountService({
-    id,
-  });
-
-  if (response.serverError) {
-    return serverErrorHandler(c, response.serverError);
-  }
-
-  return c.json(response.success, 200);
-};
-
-// 🔹 Create order
+// Create order
 const registerOrder = async (c: Context) => {
   const body = await c.req.json();
 
@@ -83,7 +101,7 @@ const registerOrder = async (c: Context) => {
   return c.json(response.success, 201);
 };
 
-// 🔹 Get single order
+// Get single order
 const getSingleOrder = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -100,7 +118,7 @@ const getSingleOrder = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-// 🔹 Update order
+// Update order
 const updateOrder = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -118,7 +136,7 @@ const updateOrder = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-// 🔹 Delete order
+// Delete order
 const deleteOrder = async (c: Context) => {
   const id = c.req.param("id");
 
@@ -135,11 +153,4 @@ const deleteOrder = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-export {
-  getOrders,
-  registerOrder,
-  getSingleOrder,
-  updateOrder,
-  deleteOrder,
-  getOrderCount,
-};
+export { getOrders, registerOrder, getSingleOrder, updateOrder, deleteOrder };
