@@ -5,8 +5,10 @@ import {
   getOrdersService,
   getSingleOrderService,
   registerOrderService,
-  updateOrderService,
   deleteOrderService,
+  updateOrderAdjustmentService,
+  updateOrderStatueService,
+  updateOrderItemsService,
 } from "../services";
 
 // et all orders
@@ -42,35 +44,35 @@ const getOrders = async (c: Context) => {
   const maxAmountRaw = c.req.query("maxAmount");
   const minAmountRaw = c.req.query("minAmount");
 
-  const maxAmount =
-    maxAmountRaw && !isNaN(Number(maxAmountRaw))
-      ? Number(maxAmountRaw)
-      : undefined;
-  const minAmount =
-    minAmountRaw && !isNaN(Number(minAmountRaw))
-      ? Number(minAmountRaw)
-      : undefined;
+  const amountRange = {
+    min:
+      minAmountRaw && !isNaN(Number(minAmountRaw))
+        ? Number(minAmountRaw)
+        : undefined,
+    max:
+      maxAmountRaw && !isNaN(Number(maxAmountRaw))
+        ? Number(maxAmountRaw)
+        : undefined,
+  };
+
+  const dateRange = {
+    from: fromDate,
+    to: toDate,
+  };
 
   const response = await getOrdersService({
     page,
     limit,
     sortBy,
     sortType,
-
-    toDate,
-    fromDate,
+    dateRange,
     date,
-
     customer,
     product,
-
     search,
-
     paymentStatus: paymentStatus === "all" ? undefined : paymentStatus,
     status: status === "all" ? undefined : status,
-
-    maxAmount,
-    minAmount,
+    amountRange,
   });
 
   if (response.error) {
@@ -118,12 +120,48 @@ const getSingleOrder = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-// Update order
-const updateOrder = async (c: Context) => {
+// Update order adjustment
+const updateOrderAdjustment = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateOrderService({ id, body });
+  const response = await updateOrderAdjustmentService({ id, body });
+
+  if (response.error) {
+    return badRequestHandler(c, response.error);
+  }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
+};
+
+// Update order status
+const updateOrderStatus = async (c: Context) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+
+  const response = await updateOrderStatueService({ id, body });
+
+  if (response.error) {
+    return badRequestHandler(c, response.error);
+  }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
+};
+
+// Update order Items
+const updateOrderItems = async (c: Context) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+
+  const response = await updateOrderItemsService({ id, body });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -153,4 +191,12 @@ const deleteOrder = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-export { getOrders, registerOrder, getSingleOrder, updateOrder, deleteOrder };
+export {
+  getOrders,
+  registerOrder,
+  getSingleOrder,
+  updateOrderAdjustment,
+  deleteOrder,
+  updateOrderItems,
+  updateOrderStatus,
+};

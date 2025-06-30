@@ -24,9 +24,6 @@ products.patch("/:id/unit", (c) => product.updateUnit(c));
 // Update product category (Private)
 products.patch("/:id/category", (c) => product.updateCategory(c));
 
-// Update product discount (Private)
-products.patch("/:id/discount", (c) => product.updateDiscount(c));
-
 // Update product general (Private)
 products.patch("/:id/general", (c) => product.updateGeneral(c));
 

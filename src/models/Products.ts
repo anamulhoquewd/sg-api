@@ -2,16 +2,9 @@ import mongoose, { model, Schema } from "mongoose";
 import { optional, z } from "zod";
 
 // Product Interface
-export interface ProductDiscunt {
-  discountType: "percentage" | "flat";
-  discountValue: number;
-  discountExp: Date;
-}
-
 export interface ProductUnit {
   unitType: "kg" | "piece";
   price: number;
-  originalPrice?: number;
   costPerItem: number;
   stockQuantity: number;
   averageWeightPerFruit?: string;
@@ -31,7 +24,6 @@ export interface ProductDocument extends Document {
   isPopular: boolean;
   lowStockThreshold: number;
   unit: ProductUnit;
-  discount?: ProductDiscunt;
   category: Schema.Types.ObjectId;
 }
 
@@ -72,7 +64,7 @@ export const productZodValidation = z.object({
   unit: z.object({
     unitType: z.enum(["kg", "piece"]),
     averageWeightPerFruit: z.string(),
-    originalPrice: z.coerce
+    price: z.coerce
       .number()
       .positive({ message: "Original Price must be a positive number." }),
     costPerItem: z.coerce
@@ -86,14 +78,6 @@ export const productZodValidation = z.object({
 
   lowStockThreshold: z.coerce.number().nonnegative().default(20),
   averageWeightPerFruit: z.string().optional(),
-
-  discount: z
-    .object({
-      discountType: z.enum(["flat", "percentage"]).optional(),
-      discountValue: z.coerce.number().optional(),
-      discountExp: z.coerce.date().optional(), // be sure it's passed as Date or a parsable string
-    })
-    .optional(),
 
   media: z
     .array(z.object({ url: z.string().url(), alt: z.string() }))
@@ -122,20 +106,10 @@ const productSchema = new Schema<ProductDocument>(
     lowStockThreshold: { type: Number, default: 20 },
     unit: {
       unitType: { type: String, enum: ["kg", "piece"], required: true },
-      price: { type: Number },
-      originalPrice: { type: Number, require: true },
+      price: { type: Number, require: true },
       costPerItem: { type: Number, required: true },
       stockQuantity: { type: Number, required: true },
       averageWeightPerFruit: { type: String },
-    },
-    discount: {
-      discountType: {
-        type: String,
-        enum: ["percentage", "flat"],
-        default: "flat",
-      },
-      discountValue: { type: Number, default: 0 },
-      discountExp: { type: Date, default: new Date() },
     },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
   },

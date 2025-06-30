@@ -9,10 +9,14 @@ import { CategoryDocument, categoryZodValidation } from "../models/Categories";
 export const registerCategoryService = async (body: CategoryDocument) => {
   // Validate Body
   const bodySchema = z.object({
-    slug: z.string(),
+    slug: z
+      .string()
+      .regex(
+        /^[a-z0-9]+(-[a-z0-9]+)*$/,
+        "Slug must be lowercase letters, numbers, and hyphens only (no spaces or special characters)."
+      ),
     name: z.string(),
-    shortDescription: z.string().max(200).optional(),
-    longDescription: string().max(500).optional(),
+    description: z.string().max(200).optional(),
   });
 
   // Safe Parse for better error handling
@@ -28,7 +32,7 @@ export const registerCategoryService = async (body: CategoryDocument) => {
   }
 
   // Destructure Body
-  const { slug, name, longDescription, shortDescription } = bodyValidation.data;
+  const { slug, name, description } = bodyValidation.data;
 
   try {
     // Check if category already exists
@@ -52,8 +56,7 @@ export const registerCategoryService = async (body: CategoryDocument) => {
     const category = new Category({
       name,
       slug,
-      shortDescription,
-      longDescription,
+      description,
     });
 
     // Save category
@@ -62,7 +65,7 @@ export const registerCategoryService = async (body: CategoryDocument) => {
     return {
       success: {
         success: true,
-        message: "User created successfully",
+        message: "Category created successfully",
         data: docs,
       },
     };
@@ -253,7 +256,10 @@ export const updateCategoryService = async ({
     }
 
     // Update only provided fields
-    Object.assign(category, bodyValidation.data);
+    Object.assign(category, {
+      name: bodyValidation.data.name,
+      description: bodyValidation.data.description,
+    });
 
     const docs = await category.save();
 

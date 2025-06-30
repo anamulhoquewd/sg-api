@@ -12,8 +12,14 @@ orders.post("/", (c) => order.registerOrder(c));
 // Get Single Order (Private)
 orders.get("/:id", (c) => order.getSingleOrder(c));
 
-// Update Order (Private)
-orders.patch("/:id", (c) => order.updateOrder(c));
+// Update Order status (Private)
+orders.patch("/:id/status", (c) => order.updateOrderStatus(c));
+
+// Update Order adjustment (Private)
+orders.patch("/:id/adjustment", (c) => order.updateOrderAdjustment(c));
+
+// Update Order items (Private)
+orders.patch("/:id/items", (c) => order.updateOrderItems(c));
 
 // Delete Order (Private)
 orders.delete("/:id", (c) => order.deleteOrder(c));

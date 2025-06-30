@@ -1,4 +1,4 @@
-import { boolean, number, z } from "zod";
+import { z } from "zod";
 import { defaults } from "../config/defaults";
 import mongoose from "mongoose";
 import { Customer, Order, Product } from "../models";
@@ -6,7 +6,7 @@ import { pagination } from "../lib";
 import idSchema from "../utils/utils";
 import { schemaValidationError } from "./utile";
 
-import { OrderDocument, orderZodValidation } from "../models/Orders";
+import { OrderDocument, OrderItem, orderZodValidation } from "../models/Orders";
 import { registerCustomerService } from "./customers";
 
 interface GetOrderServiceProps {
@@ -14,217 +14,29 @@ interface GetOrderServiceProps {
   limit: number;
   sortBy: string;
   sortType: string;
-
-  fromDate?: string;
-  toDate?: string;
+  dateRange?: {
+    from: string | Date | undefined;
+    to: string | Date | undefined;
+  };
   date?: string;
   customer?: string;
   status?: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   paymentStatus?: "paid" | "unpaid";
-  search: string;
+  search?: string;
   product?: string;
-  minAmount?: number;
-  maxAmount?: number;
+  amountRange?: {
+    min: number | undefined;
+    max: number | undefined;
+  };
 }
-
-interface DiscountInfo {
-  originalPrice: number;
-  discountType: "percentage" | "flat" | undefined;
-  discountValue: number;
-  discountExp: string | Date;
-}
-
-export const calculateFinalPrice = ({
-  originalPrice,
-  discountType,
-  discountValue = 0,
-  discountExp,
-}: DiscountInfo): number => {
-  const price = originalPrice;
-
-  const isExpired = discountExp && new Date(discountExp) < new Date();
-
-  if (isExpired) {
-    discountValue = 0;
-  }
-
-  let finalPrice = price;
-
-  if (discountType === "percentage") {
-    finalPrice = price - (price * discountValue) / 100;
-  } else if (discountType === "flat") {
-    finalPrice = price - discountValue;
-  }
-
-  return finalPrice < 0 ? 0 : finalPrice; // ensure no negative price
-};
-
-export const registerOrderService = async (body: OrderDocument) => {
-  // Safe Parse for better error handling
-  const bodyValidation = orderZodValidation
-    .extend({
-      name: z.string(),
-      phone: z.string(),
-      address: z.string().optional(),
-    })
-    .safeParse(body);
-
-  if (!bodyValidation.success) {
-    return {
-      error: schemaValidationError(
-        bodyValidation.error,
-        "Invalid request body"
-      ),
-    };
-  }
-
-  const { items, deliveryAddress, name, phone, address } = bodyValidation.data;
-
-  try {
-    // Get customer
-    let customer = await Customer.findOne({ phone });
-
-    // Check if customer exists
-    if (!customer) {
-      const response = await registerCustomerService({
-        name,
-        phone,
-        address: address ?? deliveryAddress,
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (response.serverError) {
-        throw new Error(response.serverError.message);
-      }
-
-      customer = response.success.data;
-    }
-
-    // console.log("Items: ", items);
-
-    // collect stock errors
-    const stockErrors: string[] = [];
-
-    const productPromises = items.map((item) => Product.findById(item.product));
-    const products = await Promise.all(productPromises);
-
-    const productsObject = await products.reduce(
-      async (prevAcc, product, index) => {
-        const acc = await prevAcc;
-        if (!product || !product.unit || product.unit.stockQuantity < 0)
-          return acc;
-
-        const quantity = items[index].quantity ?? 1;
-        const currentStock = product.unit.stockQuantity;
-
-        if (currentStock <= 0 || quantity > currentStock) {
-          stockErrors.push(
-            `Insufficient stock for product "${product.name}". Available: ${currentStock}, Requested: ${quantity}`
-          );
-          return acc; // Skip this product
-        }
-
-        const finalPrice = calculateFinalPrice({
-          discountExp: product.discount?.discountExp || new Date(),
-          discountValue: product.discount?.discountValue || 0,
-          originalPrice: product.unit.originalPrice || 0,
-          discountType: product.discount?.discountType || undefined,
-        });
-
-        // Update stock
-        const newStock = product.unit.stockQuantity - quantity;
-
-        // Determine new status
-        let newStatus = "inStock";
-        if (newStock <= 0) newStatus = "outOfStock";
-        else if (newStock <= product.lowStockThreshold) newStatus = "lowStock";
-
-        // Update product
-        await Product.findByIdAndUpdate(product._id, {
-          $set: {
-            "unit.stockQuantity": newStock < 0 ? 0 : newStock,
-            status: newStatus,
-          },
-        });
-
-        acc.items.push({
-          product: product._id,
-          quantity,
-        });
-
-        acc.amount += finalPrice * quantity;
-
-        console.log(
-          `Updated ${product.name} → Stock: ${newStock}, Status: ${newStatus}`
-        );
-
-        return acc;
-      },
-      Promise.resolve({
-        items: [] as { product: mongoose.Types.ObjectId; quantity: number }[],
-        amount: 0,
-      })
-    );
-
-    // return with error if any stock issues
-    if (stockErrors.length > 0) {
-      return {
-        error: {
-          message: stockErrors.join(" | "),
-        },
-      };
-    }
-
-    if (productsObject.items.length <= 0) {
-      return {
-        error: {
-          message: "At least one product is required.",
-        },
-      };
-    }
-
-    // Create order
-    const order = new Order({
-      customer: customer._id,
-      items: productsObject.items,
-      deliveryAddress,
-      amount: productsObject.amount,
-    });
-
-    // Save order
-    const docs = await order.save();
-
-    // Response
-    return {
-      success: {
-        success: true,
-        message: "Order created successfully",
-        data: docs,
-      },
-    };
-  } catch (error: any) {
-    return {
-      serverError: {
-        success: false,
-        message: error.message,
-        stack: process.env.NODE_ENV === "production" ? null : error.stack,
-      },
-    };
-  }
-};
 
 // Suppose you receive filters from request query, e.g., /orders?status=pending&minAmount=5000
 function buildOrderQuery(filters: {
   status?: string;
   paymentStatus?: string;
-  minAmount?: number;
-  maxAmount?: number;
-  fromDate?: string | Date;
-  toDate?: string | Date;
+  amountRange?: { min?: number; max?: number };
   date?: string | Date;
+  dateRange?: { from?: string | Date; to?: string | Date };
   customerId?: string;
   search?: string;
   productId?: string;
@@ -247,19 +59,29 @@ function buildOrderQuery(filters: {
   }
 
   // Amount range filter
-  if (filters.minAmount || filters.maxAmount) {
+  if (
+    filters.amountRange &&
+    filters.amountRange.min &&
+    filters.amountRange.max
+  ) {
+    // Length should be 2
     query.amount = {};
-    if (filters.minAmount) query.amount.$gte = Number(filters.minAmount);
-    if (filters.maxAmount) query.amount.$lte = Number(filters.maxAmount);
+    if (filters.amountRange.min)
+      query.amount.$gte = Number(filters.amountRange.min);
+    if (filters.amountRange.max)
+      query.amount.$lte = Number(filters.amountRange.max);
     // Cleanup if empty
     if (Object.keys(query.amount).length === 0) delete query.amount;
   }
 
   // Date filters: createdAt between fromDate and toDate
-  if (filters.fromDate || filters.toDate) {
+  if (filters.dateRange && filters.dateRange.from && filters.dateRange.to) {
+    // Length should be 2
     query.createdAt = {};
-    if (filters.fromDate) query.createdAt.$gte = new Date(filters.fromDate);
-    if (filters.toDate) query.createdAt.$lte = new Date(filters.toDate);
+    if (filters.dateRange.from)
+      query.createdAt.$gte = new Date(filters.dateRange.from);
+    if (filters.dateRange.to)
+      query.createdAt.$lte = new Date(filters.dateRange.to);
     if (Object.keys(query.createdAt).length === 0) delete query.createdAt;
   }
 
@@ -289,29 +111,163 @@ function buildOrderQuery(filters: {
   return query;
 }
 
+export const registerOrderService = async (body: OrderDocument) => {
+  // Safe Parse for better error handling
+  const bodyValidation = orderZodValidation.safeParse(body);
+
+  if (!bodyValidation.success) {
+    return {
+      error: schemaValidationError(
+        bodyValidation.error,
+        "Invalid request body"
+      ),
+    };
+  }
+
+  const { items, address, name, phone } = bodyValidation.data;
+
+  try {
+    // Get customer
+    let customer = await Customer.findOne({ phone });
+
+    // Check if customer exists
+    if (!customer) {
+      const response = await registerCustomerService({
+        name,
+        phone,
+        address: address,
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.serverError) {
+        throw new Error(response.serverError.message);
+      }
+
+      customer = response.success.data;
+    }
+
+    // collect stock errors
+    const stockErrors: string[] = [];
+
+    const productPromises = items.map((item) => Product.findById(item.product));
+    const products = await Promise.all(productPromises);
+
+    const addedProductIds = new Set<string>();
+    const productsObject = await products.reduce(
+      async (prevAcc, product, index) => {
+        const acc = await prevAcc;
+        if (!product || product.unit.stockQuantity < 0) return acc;
+
+        const productIdStr = product._id.toString();
+
+        // Check duplication using Set
+        if (addedProductIds.has(productIdStr)) return acc;
+
+        const quantity = items[index].quantity ?? 1;
+        const currentStock = product.unit.stockQuantity;
+
+        if (currentStock <= 0 || quantity > currentStock) {
+          stockErrors.push(
+            `Insufficient stock for product "${product.name}". Available: ${currentStock}, Requested: ${quantity}`
+          );
+          return acc;
+        }
+
+        const total = product.unit.price * quantity;
+        const newStock = currentStock - quantity;
+
+        // Determine status
+        let newStatus: "inStock" | "lowStock" | "outOfStock" = "inStock";
+        if (newStock <= 0) newStatus = "outOfStock";
+        else if (newStock <= product.lowStockThreshold) newStatus = "lowStock";
+
+        // Update DB
+        await Product.findByIdAndUpdate(product._id, {
+          $set: {
+            "unit.stockQuantity": Math.max(newStock, 0),
+            status: newStatus,
+          },
+        });
+
+        // Add to accumulator
+        acc.items.push({
+          product: product._id,
+          quantity,
+          name: product.name,
+          price: product.unit.price,
+          total,
+        });
+
+        acc.amount += total;
+
+        // Mark as added
+        addedProductIds.add(productIdStr);
+
+        return acc;
+      },
+      Promise.resolve({
+        items: [] as {
+          product: mongoose.Types.ObjectId;
+          quantity: number;
+          name: string;
+          price: number;
+          total: number;
+        }[],
+        amount: 0,
+      })
+    );
+
+    // return with error if any stock issues
+    if (stockErrors.length > 0) {
+      return {
+        error: {
+          message: stockErrors.join(" | "),
+        },
+      };
+    }
+
+    if (productsObject.items.length <= 0) {
+      return {
+        error: {
+          message: "At least one product is required.",
+        },
+      };
+    }
+
+    // Create order
+    const order = new Order({
+      customer: customer._id,
+      items: productsObject.items,
+      address,
+      amount: productsObject.amount,
+    });
+
+    // Save order
+    const docs = await order.save();
+
+    // Response
+    return {
+      success: {
+        success: true,
+        message: "Order created successfully",
+        data: docs,
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
 export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
-  const {
-    page,
-    limit,
-    sortBy,
-    sortType,
-
-    fromDate,
-    toDate,
-    date,
-
-    customer,
-    product,
-
-    search,
-
-    paymentStatus,
-    status,
-
-    minAmount,
-    maxAmount,
-  } = queryParams;
-
   // Validate query parameters
   const isValidDate = (val: string) => !isNaN(Date.parse(val));
   const querySchema = z.object({
@@ -321,13 +277,21 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
       .optional()
       .default(defaults.sortType as "asc" | "desc"),
 
-    fromDate: z
-      .string()
-      .refine((val) => isValidDate(val), { message: "Invalid fromDate" })
-      .optional(),
-    toDate: z
-      .string()
-      .refine((val) => isValidDate(val), { message: "Invalid toDate" })
+    dateRange: z
+      .object({
+        from: z
+          .string()
+          .optional()
+          .refine((val) => val === undefined || isValidDate(val), {
+            message: "Invalid from date",
+          }),
+        to: z
+          .string()
+          .optional()
+          .refine((val) => val === undefined || isValidDate(val), {
+            message: "Invalid to date",
+          }),
+      })
       .optional(),
     date: z
       .string()
@@ -354,32 +318,18 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
 
     search: z.string().optional(),
 
-    paymentStatus: z.enum(["paid", "unpaid"]).optional(),
+    paymentStatus: z.enum(["paid", "pending", "refunded", "failed"]).optional(),
 
-    maxAmount: z.preprocess((val) => Number(val), z.number()).optional(),
-    minAmount: z.preprocess((val) => Number(val), z.number()).optional(),
+    amountRange: z
+      .object({
+        min: z.preprocess((val) => Number(val), z.number()).optional(),
+        max: z.preprocess((val) => Number(val), z.number()).optional(),
+      })
+      .optional(),
   });
 
   // Safe Parse for better error handling
-  const queryValidation = querySchema.safeParse({
-    sortBy,
-    sortType,
-
-    fromDate: fromDate,
-    toDate: toDate,
-    date: date,
-
-    customer,
-    product,
-
-    search,
-
-    status,
-    paymentStatus,
-
-    maxAmount,
-    minAmount,
-  });
+  const queryValidation = querySchema.safeParse(queryParams);
 
   console.log("QueryValidation: ", queryValidation);
   if (!queryValidation.success) {
@@ -394,9 +344,13 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
   try {
     // Date filter
     const dateFilter: any = {};
-    if (queryValidation.data.fromDate && queryValidation.data.toDate) {
-      dateFilter.$gte = new Date(queryValidation.data.fromDate);
-      dateFilter.$lte = new Date(queryValidation.data.toDate);
+    if (
+      queryValidation.data.dateRange &&
+      queryValidation.data.dateRange.from &&
+      queryValidation.data.dateRange.to
+    ) {
+      dateFilter.$gte = new Date(queryValidation.data.dateRange.from);
+      dateFilter.$lte = new Date(queryValidation.data.dateRange.to);
     }
 
     // Query
@@ -407,14 +361,12 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
       customerId: queryValidation.data.customer,
       productId: queryValidation.data.product,
 
+      amountRange: queryValidation.data.amountRange,
+
       search: queryValidation.data.search,
 
-      maxAmount: queryValidation.data.maxAmount,
-      minAmount: queryValidation.data.minAmount,
-
       date: queryValidation.data.date,
-      fromDate: queryValidation.data.fromDate,
-      toDate: queryValidation.data.toDate,
+      dateRange: queryValidation.data.dateRange,
     });
 
     // Allowable sort fields
@@ -422,7 +374,7 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
       queryValidation.data.sortBy
     )
       ? queryValidation.data.sortBy
-      : "updatedAt";
+      : "createdAt";
     const sortDirection =
       queryValidation.data.sortType.toLocaleLowerCase() === "asc" ? 1 : -1;
 
@@ -430,13 +382,9 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
     const [orders, total] = await Promise.all([
       Order.find(query)
         .sort({ [sortField]: sortDirection })
-        .skip((page - 1) * limit)
-        .limit(limit)
+        .skip((queryParams.page - 1) * queryParams.limit)
+        .limit(queryParams.limit)
         .populate("customer")
-        .populate({
-          path: "items.product",
-          model: "Product", // Assuming your product model is named 'Product'
-        })
         .exec(),
 
       Order.countDocuments(query),
@@ -444,8 +392,8 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
 
     // Pagination
     const getPagination = pagination({
-      page: page,
-      limit: limit,
+      page: queryParams.page,
+      limit: queryParams.limit,
       total,
     });
     console.log("Query: ", query);
@@ -510,17 +458,14 @@ export const getSingleOrderService = async (id: string) => {
   }
 };
 
-export const updateOrderService = async ({
+export const updateOrderStatueService = async ({
   id,
   body,
 }: {
   id: string;
   body: {
-    status: "shipped" | "delivered" | "cancelled" | "pending";
-    paymentStatus: "unpaid" | "paid";
-    deliveryAddress: string;
-    amount: number;
-    item: { product: string; quantity: number };
+    status: "shipped" | "delivered" | "cancelled" | "pending" | "processing";
+    paymentStatus: "pending" | "paid" | "failed" | "refunded";
   };
 }) => {
   // Validate ID
@@ -531,37 +476,10 @@ export const updateOrderService = async ({
 
   // Validate the data
   const bodySchema = z.object({
-    status: z.enum(["shipped", "delivered", "cancelled", "pending"]).optional(),
-    paymentStatus: z.enum(["paid", "unpaid"]).optional(),
-    amount: z.number().optional(),
-    deliveryAddress: z.string().optional(),
-    item: z
-      .object({
-        product: z
-          .any()
-          .transform((val) =>
-            val instanceof mongoose.Types.ObjectId ? val.toString() : val
-          )
-          .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-            message: "Invalid MongoDB Document ID format",
-          }),
-        quantity: z.number().min(1, "Quantity must be at least 1"),
-      })
+    status: z
+      .enum(["shipped", "delivered", "cancelled", "pending", "processing"])
       .optional(),
-    removeItem: z.string().optional(),
-    addItem: z
-      .object({
-        product: z
-          .any()
-          .transform((val) =>
-            val instanceof mongoose.Types.ObjectId ? val.toString() : val
-          )
-          .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-            message: "Invalid MongoDB Document ID format",
-          }),
-        quantity: z.number().min(1, "Quantity must be at least 1"),
-      })
-      .optional(),
+    paymentStatus: z.enum(["pending", "paid", "failed", "refunded"]).optional(),
   });
 
   // Safe Parse for better error handling
@@ -598,55 +516,12 @@ export const updateOrderService = async ({
       };
     }
 
-    if (bodyValidation.data.item) {
-      const updatedProductId = bodyValidation.data.item.product;
-
-      order.items = order.items.map((item) => {
-        if (item.product.toString() === updatedProductId) {
-          return {
-            ...item,
-            quantity: bodyValidation.data.item?.quantity ?? item.quantity,
-          };
-        }
-        return item;
-      });
-    }
-
-    if (bodyValidation.data.removeItem) {
-      order.items = order.items.filter(
-        (item) => item.product.toString() !== bodyValidation.data.removeItem
-      );
-    }
-
-    if (bodyValidation.data.addItem) {
-      const { product, quantity } = bodyValidation.data.addItem;
-
-      const existingItem = order.items.find(
-        (item) => item.product.toString() === product
-      );
-
-      if (existingItem) {
-        existingItem.quantity = quantity;
-      } else {
-        order.items.push({ product, quantity });
-      }
-    }
-
     if (bodyValidation.data.status) {
       order.status = bodyValidation.data.status;
     }
     if (bodyValidation.data.paymentStatus) {
       order.paymentStatus = bodyValidation.data.paymentStatus;
     }
-    if (bodyValidation.data.deliveryAddress) {
-      order.deliveryAddress = bodyValidation.data.deliveryAddress;
-    }
-    if (bodyValidation.data.amount) {
-      order.amount = bodyValidation.data.amount;
-    }
-
-    // Update order only if data is provided
-    // Object.assign(order, bodyValidation.data);
 
     // Save order
     const docs = await order.save();
@@ -655,8 +530,239 @@ export const updateOrderService = async ({
     return {
       success: {
         success: true,
-        message: "Order updated successfully",
+        message: "Order status updated successfully",
         data: docs,
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
+export const updateOrderAdjustmentService = async ({
+  id,
+  body,
+}: {
+  id: string;
+  body: {
+    amount: number;
+  };
+}) => {
+  // Validate ID
+  const idValidation = idSchema.safeParse({ id });
+  if (!idValidation.success) {
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
+  }
+
+  // Validate the data
+  const bodySchema = z.object({
+    amount: z.number(),
+  });
+
+  // Safe Parse for better error handling
+  const bodyValidation = bodySchema.safeParse(body);
+  if (!bodyValidation.success) {
+    return {
+      error: schemaValidationError(
+        bodyValidation.error,
+        "Invalid request body"
+      ),
+    };
+  }
+
+  try {
+    // Check if order exists
+    const order = await Order.findById(idValidation.data.id);
+
+    if (!order) {
+      return {
+        error: {
+          message: "Order not found with provided ID",
+        },
+      };
+    }
+
+    // Check if data is provided
+    if (Object.keys(bodyValidation.data).length === 0) {
+      return {
+        success: {
+          success: true,
+          message: "No updates provided, returning existing order",
+          data: order,
+        },
+      };
+    }
+
+    if (bodyValidation.data.amount) {
+      order.amount = bodyValidation.data.amount;
+    }
+
+    // Save order
+    const docs = await order.save();
+
+    // Response
+    return {
+      success: {
+        success: true,
+        message: "Order status updated successfully",
+        data: docs,
+      },
+    };
+  } catch (error: any) {
+    return {
+      serverError: {
+        success: false,
+        message: error.message,
+        stack: process.env.NODE_ENV === "production" ? null : error.stack,
+      },
+    };
+  }
+};
+
+// backend kono calculation a jabe na. just items niye update kore dibe and new amount nibe ar update korbe. calculation ja korar frontend theke kore pathabo.
+export const updateOrderItemsService = async ({
+  id,
+  body,
+}: {
+  id: string;
+  body: {
+    items: OrderItem[];
+    newAmount: number;
+  };
+}) => {
+  const idValidation = idSchema.safeParse({ id });
+  if (!idValidation.success) {
+    return { error: schemaValidationError(idValidation.error, "Invalid ID") };
+  }
+
+  const bodyValidationSchema = z.object({
+    items: z.array(
+      z.object({
+        product: z
+          .any()
+          .transform((val) =>
+            val instanceof mongoose.Types.ObjectId ? val.toString() : val
+          )
+          .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+            message: "Invalid MongoDB Document ID format",
+          }),
+        quantity: z.number().min(1, "Quantity must be at least 1"),
+        name: z.string(),
+        total: z.number(),
+        price: z.number(),
+      })
+    ),
+    newAmount: z.number(),
+  });
+
+  const bodyValidation = bodyValidationSchema.safeParse(body);
+  if (!bodyValidation.success) {
+    return {
+      error: schemaValidationError(
+        bodyValidation.error,
+        "Invalid request body"
+      ),
+    };
+  }
+
+  const { items, newAmount } = bodyValidation.data;
+
+  try {
+    const order = await Order.findById(idValidation.data.id);
+    if (!order) {
+      return {
+        error: {
+          message: "Order not found with provided ID",
+        },
+      };
+    }
+
+    if (!items.length) {
+      return {
+        error: {
+          message: "If no items are available, delete the order.",
+        },
+      };
+    }
+
+    // Validate and update stock
+    const productDocs = await Product.find({
+      _id: { $in: items.map((item) => item.product) },
+    });
+
+    const stockErrors: string[] = [];
+
+    for (const item of items) {
+      const product = productDocs.find(
+        (p) => p._id.toString() === item.product
+      );
+      if (!product) {
+        stockErrors.push(`Product not found for ID ${item.product}`);
+        continue;
+      }
+
+      const existingItemInOrder = order.items.find(
+        (i) => i.product.toString() === item.product
+      );
+
+      const previousQuantity = existingItemInOrder?.quantity ?? 0;
+      const newQuantity = item.quantity;
+
+      // Calculate difference: if positive → stock going to minus, negative → plus
+      const stockDelta = previousQuantity - newQuantity;
+
+      const currentStock = product.unit.stockQuantity;
+
+      // Available stock check only if need to decrease stock
+      if (stockDelta < 0 && Math.abs(stockDelta) > currentStock) {
+        stockErrors.push(
+          `Insufficient stock for product "${
+            product.name
+          }". Available: ${currentStock}, Requested extra: ${Math.abs(
+            stockDelta
+          )}`
+        );
+        continue;
+      }
+
+      const updatedStock = currentStock + stockDelta;
+
+      // Determine new status
+      let newStatus: "inStock" | "lowStock" | "outOfStock" = "inStock";
+      if (updatedStock <= 0) newStatus = "outOfStock";
+      else if (updatedStock <= product.lowStockThreshold)
+        newStatus = "lowStock";
+
+      // Update DB
+      await Product.findByIdAndUpdate(product._id, {
+        $set: {
+          "unit.stockQuantity": Math.max(updatedStock, 0),
+          status: newStatus,
+        },
+      });
+    }
+
+    if (stockErrors.length) {
+      return {
+        errors: { message: stockErrors },
+      };
+    }
+
+    order.items = items as OrderItem[];
+    order.amount = newAmount;
+    const updatedOrder = await order.save();
+
+    return {
+      success: {
+        success: true,
+        message: "Order updated successfully",
+        data: updatedOrder,
       },
     };
   } catch (error: any) {
@@ -686,6 +792,13 @@ export const deleteOrderService = async (id: string) => {
           message: "Order not found with provided ID",
         },
       };
+    }
+
+    // Restore product quantities
+    for (const item of order.items) {
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: { stock: item.quantity },
+      });
     }
 
     // Delete order

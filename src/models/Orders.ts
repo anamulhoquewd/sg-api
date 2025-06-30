@@ -2,16 +2,20 @@ import mongoose, { model, Schema, Document } from "mongoose";
 import { z } from "zod";
 
 // Order Interface
+export interface OrderItem {
+  product: Schema.Types.ObjectId;
+  quantity: number;
+  name: string;
+  price: number;
+  total: number;
+}
 export interface OrderDocument extends Document {
   customer: Schema.Types.ObjectId;
-  items: {
-    product: Schema.Types.ObjectId;
-    quantity: number;
-  }[];
+  items: OrderItem[];
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   amount: number;
-  paymentStatus: "unpaid" | "paid";
-  deliveryAddress: string;
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  address: string;
 }
 
 // Customers validation with zod
@@ -29,7 +33,14 @@ export const orderZodValidation = z.object({
       quantity: z.number().min(1, "Quantity must be at least 1"),
     })
   ),
-  deliveryAddress: z.string().min(5).max(200),
+  address: z.string().min(5).max(200),
+  name: z.string(),
+  phone: z
+    .string()
+    .regex(
+      /^01\d{9}$/,
+      "Phone number must start with 01 and be exactly 11 digits"
+    ),
 });
 
 // Order Schema
@@ -45,6 +56,9 @@ const orderSchema = new Schema<OrderDocument>(
           required: true,
         },
         quantity: { type: Number, required: true },
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        total: { type: Number, required: true },
       },
     ],
     status: {
@@ -52,13 +66,13 @@ const orderSchema = new Schema<OrderDocument>(
       enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
-    amount: { type: Number, required: true },
     paymentStatus: {
       type: String,
-      enum: ["unpaid", "paid"],
-      default: "unpaid",
+      enum: ["pending", "paid", "failed", "refunded"],
+      default: "pending",
     },
-    deliveryAddress: { type: String, required: true },
+    amount: { type: Number, required: true },
+    address: { type: String, required: true },
   },
   { timestamps: true }
 );

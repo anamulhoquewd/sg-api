@@ -23,7 +23,9 @@ import {
   getOrdersService,
   registerOrderService,
   getSingleOrderService,
-  updateOrderService,
+  updateOrderItemsService,
+  updateOrderAdjustmentService,
+  updateOrderStatueService,
   deleteOrderService,
 } from "./orders";
 import {
@@ -53,13 +55,11 @@ import {
   updateVisibilityService,
   updateGeneralService,
   deleteMediaService,
-  updateDiscountService,
 } from "./products";
 
 export {
   updateUnitService,
   deleteMediaService,
-  updateDiscountService,
   updateOnlyCategoryService,
   includesMediaUrlsService,
   updateVisibilityService,
@@ -89,7 +89,9 @@ export {
   getOrdersService,
   registerOrderService,
   getSingleOrderService,
-  updateOrderService,
+  updateOrderItemsService,
+  updateOrderAdjustmentService,
+  updateOrderStatueService,
   deleteOrderService,
   deletePaymentService,
   getPaymentsService,

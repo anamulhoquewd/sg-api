@@ -1,16 +1,12 @@
 import { z } from "zod";
 import { Category, Product } from "../models";
-import { ProductDiscunt, productZodValidation } from "../models/Products";
+import { ProductDocument, productZodValidation } from "../models/Products";
 import { schemaValidationError } from "./utile";
 import { defaults } from "../config/defaults";
 import { pagination } from "../lib";
 import idSchema from "../utils/utils";
 import { s3 } from "./../config/S3";
-import {
-  DeleteObjectCommand,
-  PutObjectCommand,
-  DeleteObjectsCommand,
-} from "@aws-sdk/client-s3";
+import { PutObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 
 const AWS_BUCKET_NAME = (process.env.AWS_BUCKET_NAME as string) || "bucket";
 const AWS_REGION = (process.env.AWS_REGION as string) || "eu-north-1";
@@ -18,7 +14,7 @@ const AWS_ACCESS_KEY_ID = (process.env.AWS_ACCESS_KEY_ID as string) || "";
 const AWS_SECRET_ACCESS_KEY =
   (process.env.AWS_SECRET_ACCESS_KEY as string) || "";
 
-export const registerProductService = async (body: ProductDiscunt) => {
+export const registerProductService = async (body: ProductDocument) => {
   // Validate the data
   const bodyValidation = productZodValidation
     .omit({ media: true })
@@ -45,13 +41,12 @@ export const registerProductService = async (body: ProductDiscunt) => {
     isPopular,
     category,
     unit: {
-      originalPrice,
+      price,
       unitType,
       stockQuantity,
       averageWeightPerFruit,
       costPerItem,
     },
-    discount: { discountExp, discountType, discountValue } = {},
     season,
   } = bodyValidation.data;
 
@@ -86,7 +81,7 @@ export const registerProductService = async (body: ProductDiscunt) => {
       category,
       unit: {
         costPerItem,
-        originalPrice,
+        price,
         stockQuantity,
         unitType,
         averageWeightPerFruit,
@@ -94,14 +89,6 @@ export const registerProductService = async (body: ProductDiscunt) => {
       longDescription,
       origin,
       shortDescription,
-      ...(discountValue &&
-        discountValue > 0 && {
-          discount: {
-            discountType,
-            discountValue,
-            discountExp,
-          },
-        }),
     });
 
     // Save product
@@ -338,8 +325,8 @@ export const uploadMediaService = async ({
       .array(
         z
           .instanceof(File, { message: "Invalid file format" })
-          .refine((file) => file.size <= 4 * 1024 * 1024, {
-            message: "File size must be less than 4MB",
+          .refine((file) => file.size <= 2 * 1024 * 1024, {
+            message: "File size must be less than 2MB",
           })
           .refine(
             (file) =>
@@ -376,7 +363,7 @@ export const uploadMediaService = async ({
   let filenames: string[] = [];
   media.map((file: File) =>
     filenames.push(
-      `${file.name.split(".")[0].split(" ").join("-")}-${Date.now()}.jpeg`
+      `${file.name.split(".")[0].split(" ").join("-")}-${Date.now()}.webp`
     )
   );
 
@@ -391,7 +378,7 @@ export const uploadMediaService = async ({
         Bucket: AWS_BUCKET_NAME,
         Key: key,
         Body: buffer,
-        ContentType: "image/jpeg",
+        ContentType: "image/webp",
       };
 
       await s3.send(new PutObjectCommand(params));
@@ -430,7 +417,6 @@ export const getProductsService = async (queryParams: {
   popular: boolean | string;
   visibility: boolean | string;
   category: string;
-  onlyDiscounted: string;
   status: string;
 }) => {
   const {
@@ -442,7 +428,6 @@ export const getProductsService = async (queryParams: {
     popular,
     visibility,
     category,
-    onlyDiscounted,
     status,
   } = queryParams;
 
@@ -487,9 +472,6 @@ export const getProductsService = async (queryParams: {
     if (visibility !== "") query.visibility = visibility;
     if (category !== "") query.category = queryValidation.data.category;
     if (status !== "") query.status = queryValidation.data.status;
-    if (onlyDiscounted === "true")
-      query["discount.discountExp"] = { $gte: new Date() };
-
     if (queryValidation.data.search) {
       query.$or = [
         { slug: { $regex: queryValidation.data.search, $options: "i" } },
@@ -523,32 +505,11 @@ export const getProductsService = async (queryParams: {
       total,
     });
 
-    const finalProducts = products.map((product) => {
-      const price = product.unit?.originalPrice ?? 0;
-      let discountValue = product.discount?.discountValue ?? 0;
-      const discountExp = product.discount?.discountExp;
-
-      if (discountExp && new Date(discountExp) < new Date()) {
-        discountValue = 0;
-      }
-
-      const discountType = product.discount?.discountType;
-
-      const finalPrice =
-        discountType === "percentage"
-          ? price - (price * discountValue) / 100
-          : price - discountValue;
-
-      product.unit.price = finalPrice;
-
-      return product;
-    });
-
     return {
       success: {
         success: true,
         message: "Products fetched successfully",
-        data: finalProducts,
+        data: products,
         pagination: getPagination,
       },
     };
@@ -596,23 +557,6 @@ export const getSingleProductSercive = async (slug: string) => {
       };
     }
 
-    const price = product.unit?.originalPrice ?? 0;
-    let discountValue = product.discount?.discountValue ?? 0;
-    const discountExp = product.discount?.discountExp;
-
-    if (discountExp && new Date(discountExp) < new Date()) {
-      discountValue = 0;
-    }
-
-    const discountType = product.discount?.discountType;
-
-    const finalPrice =
-      discountType === "percentage"
-        ? price - (price * discountValue) / 100
-        : price - discountValue;
-
-    product.unit.price = finalPrice;
-
     // Response
     return {
       success: {
@@ -635,7 +579,7 @@ export const getSingleProductSercive = async (slug: string) => {
 interface UpdateUnitBody {
   status: "inStock" | "lowStock" | "outOfStock";
   lowStockThreshold: number;
-  originalPrice: number;
+  price: number;
   costPerItem: number;
   stockQuantity: number;
   averageWeightPerFruit: string;
@@ -660,7 +604,7 @@ export const updateUnitService = async ({
   const updateUnitValuidationWithZod = z.object({
     status: z.enum(["inStock", "lowStock", "outOfStock"]).optional(),
     lowStockThreshold: z.number().optional(),
-    originalPrice: z.number().optional(),
+    price: z.number().optional(),
     costPerItem: z.number().optional(),
     stockQuantity: z.number().optional(),
     averageWeightPerFruit: z.string().optional(),
@@ -708,8 +652,8 @@ export const updateUnitService = async ({
     if (bodyValidation.data.lowStockThreshold) {
       product.lowStockThreshold = bodyValidation.data.lowStockThreshold;
     }
-    if (bodyValidation.data.originalPrice) {
-      product.unit.originalPrice = bodyValidation.data.originalPrice;
+    if (bodyValidation.data.price) {
+      product.unit.price = bodyValidation.data.price;
     }
     if (bodyValidation.data.costPerItem) {
       product.unit.costPerItem = bodyValidation.data.costPerItem;
@@ -732,109 +676,6 @@ export const updateUnitService = async ({
       success: {
         success: true,
         message: "Product (Unit) updated successfully",
-        data: docs,
-      },
-    };
-  } catch (error: any) {
-    return {
-      serverError: {
-        success: false,
-        message: error.message,
-        stack: process.env.NODE_ENV === "production" ? null : error.stack,
-      },
-    };
-  }
-};
-
-interface UpdateDiscountBody {
-  discountType: "flat" | "percentage";
-  discountValue: number;
-  discountExp: Date;
-}
-
-export const updateDiscountService = async ({
-  id,
-  body,
-}: {
-  id: string;
-  body: UpdateDiscountBody;
-}) => {
-  // Validate ID
-  const idValidation = idSchema.safeParse({ id });
-  if (!idValidation.success) {
-    return {
-      error: schemaValidationError(idValidation.error, "Invalid ID"),
-    };
-  }
-
-  const updateUnitValuidationWithZod = z.object({
-    discountType: z.enum(["flat", "percentage"]).optional(),
-    discountValue: z.number().optional(),
-    discountExp: z.date().optional(),
-  });
-
-  // Validate the data
-  const bodyValidation = updateUnitValuidationWithZod.safeParse(body);
-  if (!bodyValidation.success) {
-    return {
-      error: schemaValidationError(
-        bodyValidation.error,
-        "Invalid request body"
-      ),
-    };
-  }
-
-  try {
-    // Check if product exists
-    const product = await Product.findById(idValidation.data.id);
-
-    if (!product) {
-      return {
-        error: {
-          message: "Product not found with the provided ID",
-        },
-      };
-    }
-
-    // Check if any field is provided
-    if (Object.keys(bodyValidation.data).length === 0) {
-      return {
-        success: {
-          success: true,
-          message: "No updates provided, returning existing product (discount)",
-          data: product,
-        },
-      };
-    }
-
-    // Update only provided fields
-    if (!product.discount) {
-      product.discount = {
-        discountType: "flat",
-        discountValue: 0,
-        discountExp: new Date(),
-      };
-    }
-
-    const discount = product.discount!;
-
-    if (bodyValidation.data.discountExp) {
-      discount.discountExp = bodyValidation.data.discountExp;
-    }
-    if (bodyValidation.data.discountValue) {
-      discount.discountValue = bodyValidation.data.discountValue;
-    }
-    if (bodyValidation.data.discountType) {
-      discount.discountType = bodyValidation.data.discountType;
-    }
-
-    const docs = await product.save();
-
-    // Response
-    return {
-      success: {
-        success: true,
-        message: "Product (Discount) updated successfully",
         data: docs,
       },
     };

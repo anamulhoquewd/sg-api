@@ -11,7 +11,6 @@ import {
   updateOnlyCategoryService,
   deleteMediaService,
   includesMediaUrlsService,
-  updateDiscountService,
 } from "../services";
 import { getProductsService } from "../services";
 import { defaults } from "../config/defaults";
@@ -60,7 +59,6 @@ const getProducts = async (c: Context) => {
   const isVisible = c.req.query("isVisible");
   const status = c.req.query("status") || defaults.productStatus;
   const category = c.req.query("category") || "";
-  const onlyDiscounted = c.req.query("onlyDiscounted");
 
   const popularity =
     isPopular === "false" ? false : isPopular === "true" ? true : "";
@@ -75,7 +73,6 @@ const getProducts = async (c: Context) => {
     sortType,
     popular: popularity,
     visibility,
-    onlyDiscounted: onlyDiscounted || "",
     category,
     status,
   });
@@ -128,23 +125,6 @@ const updateUnit = async (c: Context) => {
   const body = await c.req.json();
 
   const response = await updateUnitService({ body, id });
-
-  if (response.error) {
-    return badRequestHandler(c, response.error);
-  }
-
-  if (response.serverError) {
-    return serverErrorHandler(c, response.serverError);
-  }
-
-  return c.json(response.success, 200);
-};
-
-const updateDiscount = async (c: Context) => {
-  const id = c.req.param("id");
-  const body = await c.req.json();
-
-  const response = await updateDiscountService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -249,7 +229,6 @@ export {
   deleteProduct,
   uploadMedia,
   updateUnit,
-  updateDiscount,
   updateCategory,
   updateGeneral,
   updateVisibility,

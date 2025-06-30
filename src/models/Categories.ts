@@ -5,16 +5,14 @@ import { z } from "zod";
 export interface CategoryDocument extends Document {
   slug: string;
   name: string;
-  shortDescription?: string;
-  longDescription?: string;
+  description?: string;
 }
 
 // Category validatoin with zod
 export const categoryZodValidation = z.object({
   slug: z.string().optional(),
   name: z.string().optional(),
-  shortDescription: z.string().max(200).optional(),
-  longDescription: z.string().max(500).optional(),
+  description: z.string().max(250).optional(),
 });
 
 // Category Schema
@@ -22,8 +20,7 @@ const categorySchema = new Schema<CategoryDocument>(
   {
     slug: { type: String, required: true, unique: true },
     name: { type: String, required: true },
-    shortDescription: { type: String },
-    longDescription: { type: String },
+    description: { type: String },
   },
   { timestamps: true }
 );
