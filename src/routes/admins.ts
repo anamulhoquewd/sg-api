@@ -31,13 +31,13 @@ admins.post("/auth/forgot-password", (c) => admin.forgotPassword(c));
 admins.put("/auth/reset-password/:resetToken", (c) => admin.resetPassword(c));
 
 // Get me
-admins.get("/me", protect, (c) => admin.getMe(c));
+admins.get("/auth/me", protect, (c) => admin.getMe(c));
 
 // Update Profile (Private)
-admins.patch("/me", protect, (c) => admin.updateMe(c));
+admins.patch("/auth/me", protect, (c) => admin.updateMe(c));
 
 // Upload Profile Picture (Private)
-admins.post("/uploads", protect, (c) => admin.changeAvatar(c));
+// admins.post("/auth/uploads", protect, (c) => admin.changeAvatar(c));
 
 // Get Single admin (Private)
 admins.get("/:id", protect, (c) => admin.getSingleAdmin(c));

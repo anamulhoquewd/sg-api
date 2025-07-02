@@ -39,10 +39,6 @@ const getAdmins = async (c: Context) => {
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
   const role = c.req.query("role") || "";
-  const isActive = c.req.query("isActive");
-
-  const activity =
-    isActive === "false" ? false : isActive === "true" ? true : "";
 
   const response = await getAdminsService({
     page,
@@ -51,7 +47,6 @@ const getAdmins = async (c: Context) => {
     sortBy,
     sortType,
     role,
-    isActive: activity,
   });
 
   if (response.error) {

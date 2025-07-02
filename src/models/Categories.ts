@@ -1,5 +1,4 @@
 import { model, Schema } from "mongoose";
-import { z } from "zod";
 
 // Category Interface
 export interface CategoryDocument extends Document {
@@ -7,13 +6,6 @@ export interface CategoryDocument extends Document {
   name: string;
   description?: string;
 }
-
-// Category validatoin with zod
-export const categoryZodValidation = z.object({
-  slug: z.string().optional(),
-  name: z.string().optional(),
-  description: z.string().max(250).optional(),
-});
 
 // Category Schema
 const categorySchema = new Schema<CategoryDocument>(

@@ -5,13 +5,13 @@ import { authorize, protect } from "../middlewares";
 const customers = new Hono();
 
 // Get All customers (Private)
-customers.get("/", (c) => customer.getCustomers(c));
+customers.get("/", protect, (c) => customer.getCustomers(c));
 
 // Register new customer (Privet) - for test
 // customers.post("/", protect, (c) => customer.registerCustomer(c));
 
 // Get Single Customer (Private)
-customers.get("/:id", protect, (c) => customer.getSingleCustomer(c));
+// customers.get("/:id", protect, (c) => customer.getSingleCustomer(c));
 
 // Update Customer (Private)
 customers.put("/:id", protect, (c) => customer.updateCustomer(c));

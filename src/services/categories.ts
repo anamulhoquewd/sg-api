@@ -1,23 +1,28 @@
-import { string, z } from "zod";
+import { z } from "zod";
 import { schemaValidationError } from "./utile";
 import { Category } from "../models";
 import { pagination } from "../lib";
 import { defaults } from "../config/defaults";
 import idSchema from "../utils/utils";
-import { CategoryDocument, categoryZodValidation } from "../models/Categories";
+import { CategoryDocument } from "../models/Categories";
+
+// Category validatoin with zod
+export const categoryZodValidation = z.object({
+  slug: z
+    .string()
+    .min(3)
+    .max(100)
+    .regex(
+      /^[a-z0-9]+(-[a-z0-9]+)*$/,
+      "Slug must be lowercase letters, numbers, and hyphens only (no spaces or special characters)."
+    ),
+  name: z.string().min(3).max(100),
+  description: z.string().min(10).max(200).optional(),
+});
 
 export const registerCategoryService = async (body: CategoryDocument) => {
   // Validate Body
-  const bodySchema = z.object({
-    slug: z
-      .string()
-      .regex(
-        /^[a-z0-9]+(-[a-z0-9]+)*$/,
-        "Slug must be lowercase letters, numbers, and hyphens only (no spaces or special characters)."
-      ),
-    name: z.string(),
-    description: z.string().max(200).optional(),
-  });
+  const bodySchema = categoryZodValidation;
 
   // Safe Parse for better error handling
   const bodyValidation = bodySchema.safeParse(body);
@@ -222,7 +227,11 @@ export const updateCategoryService = async ({
   }
 
   // Validate Body
-  const bodyValidation = categoryZodValidation.safeParse(body);
+  const bodyValidation = categoryZodValidation
+    .omit({ slug: true })
+    .partial()
+    .safeParse(body);
+
   if (!bodyValidation.success) {
     return {
       error: schemaValidationError(

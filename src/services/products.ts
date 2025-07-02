@@ -60,7 +60,7 @@ export const registerProductService = async (body: ProductDocument) => {
           message: "Product already exists",
           fields: [
             {
-              slug: "slug",
+              name: "slug",
               message: "Slug must be unique",
             },
           ],

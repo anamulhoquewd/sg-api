@@ -31,7 +31,6 @@ export const adminZodValidation = z.object({
       "Phone number must start with 01 and be exactly 11 digits"
     ),
   address: z.string().max(100, "Address must be less than 100 characters long"),
-  active: z.boolean().default(true),
 });
 
 //  Admin Schema

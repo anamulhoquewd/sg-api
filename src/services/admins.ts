@@ -53,9 +53,8 @@ export const getAdminsService = async (queryParams: {
   sortBy: string;
   sortType: string;
   role: string;
-  isActive: boolean | string;
 }) => {
-  const { page, limit, search, sortBy, sortType, role, isActive } = queryParams;
+  const { page, limit, search, sortBy, sortType, role } = queryParams;
 
   // Validate query parameters
   const querySchema = z.object({
@@ -88,7 +87,6 @@ export const getAdminsService = async (queryParams: {
   try {
     // Build query
     const query: any = {};
-    if (isActive !== "") query.isActive = isActive;
     if (queryValidation.data.search) {
       query.$or = [
         { name: { $regex: queryValidation.data.search, $options: "i" } },
@@ -148,7 +146,6 @@ export const registerAdminService = async (body: {
   phone: string;
   email: string;
   address: string;
-  isActive: boolean;
 }) => {
   // Safe Parse for better error handling
   const bodyValidation = adminZodValidation.safeParse(body);
@@ -163,7 +160,7 @@ export const registerAdminService = async (body: {
   }
 
   // Destructure Body
-  const { name, email, phone, address, active } = bodyValidation.data;
+  const { name, email, phone, address } = bodyValidation.data;
 
   try {
     // Check if admin already exists
@@ -200,7 +197,6 @@ export const registerAdminService = async (body: {
       password,
       address,
       role: "admin",
-      active,
     });
 
     // Save Admin
@@ -215,7 +211,7 @@ export const registerAdminService = async (body: {
     };
 
     // Send Email
-    // await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
 
     return {
       success: {
