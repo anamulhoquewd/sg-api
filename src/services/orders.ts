@@ -124,7 +124,7 @@ export const registerOrderService = async (body: OrderDocument) => {
     };
   }
 
-  const { items, address, name, phone } = bodyValidation.data;
+  const { items, address, name, phone, deliveryCost } = bodyValidation.data;
 
   try {
     // Get customer
@@ -242,7 +242,8 @@ export const registerOrderService = async (body: OrderDocument) => {
       customer: customer._id,
       items: productsObject.items,
       address,
-      amount: productsObject.amount,
+      deliveryCost,
+      amount: productsObject.amount + deliveryCost,
     });
 
     // Save order
@@ -552,6 +553,7 @@ export const updateOrderAdjustmentService = async ({
   id: string;
   body: {
     amount: number;
+    type: "addition" | "discount";
   };
 }) => {
   // Validate ID
@@ -563,6 +565,7 @@ export const updateOrderAdjustmentService = async ({
   // Validate the data
   const bodySchema = z.object({
     amount: z.number(),
+    type: z.enum(["addition", "discount"]),
   });
 
   // Safe Parse for better error handling
@@ -600,7 +603,10 @@ export const updateOrderAdjustmentService = async ({
     }
 
     if (bodyValidation.data.amount) {
-      order.amount = bodyValidation.data.amount;
+      order.amount =
+        bodyValidation.data.type === "addition"
+          ? order.amount + bodyValidation.data.amount
+          : order.amount - bodyValidation.data.amount;
     }
 
     // Save order
@@ -610,7 +616,7 @@ export const updateOrderAdjustmentService = async ({
     return {
       success: {
         success: true,
-        message: "Order status updated successfully",
+        message: "Order amount adjustment updated successfully",
         data: docs,
       },
     };
@@ -625,7 +631,6 @@ export const updateOrderAdjustmentService = async ({
   }
 };
 
-// backend kono calculation a jabe na. just items niye update kore dibe and new amount nibe ar update korbe. calculation ja korar frontend theke kore pathabo.
 export const updateOrderItemsService = async ({
   id,
   body,

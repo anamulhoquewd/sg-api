@@ -12,6 +12,7 @@ export interface OrderItem {
 export interface OrderDocument extends Document {
   customer: Schema.Types.ObjectId;
   items: OrderItem[];
+  deliveryCost: number;
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   amount: number;
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
@@ -33,7 +34,7 @@ export const orderZodValidation = z.object({
       quantity: z.number().min(1, "Quantity must be at least 1"),
     })
   ),
-  address: z.string().min(5).max(200),
+  address: z.string().max(200),
   name: z.string(),
   phone: z
     .string()
@@ -41,6 +42,7 @@ export const orderZodValidation = z.object({
       /^01\d{9}$/,
       "Phone number must start with 01 and be exactly 11 digits"
     ),
+  deliveryCost: z.number(),
 });
 
 // Order Schema
@@ -61,6 +63,7 @@ const orderSchema = new Schema<OrderDocument>(
         total: { type: Number, required: true },
       },
     ],
+    deliveryCost: { type: Number, require: true },
     status: {
       type: String,
       enum: ["pending", "processing", "shipped", "delivered", "cancelled"],

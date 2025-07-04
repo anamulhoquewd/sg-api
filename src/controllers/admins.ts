@@ -13,7 +13,7 @@ import {
 } from "../middlewares";
 import axios from "axios";
 import {
-  changeAvatarService,
+  uploadSingleFile,
   changePasswordService,
   deleteAdminService,
   forgotPasswordService,
@@ -398,7 +398,7 @@ const resetPassword = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-// Change Avatar
+// Change Admin Avatar
 const changeAvatar = async (c: Context) => {
   const body = await c.req.parseBody();
   const file = body["avatar"] as File;
@@ -411,14 +411,13 @@ const changeAvatar = async (c: Context) => {
 
   // Generate filename
   const fileN = c.req.query("filename") || "avatar";
-  const filename = `${fileN}-${Date.now()}.jpeg`;
+  const filename = `${fileN}-${Date.now()}.webp`;
 
-  console.log("body", body["avatar"]);
-
-  const response = await changeAvatarService({
+  const response = await uploadSingleFile({
     body: { avatar: file },
     filename,
-    admin,
+    collection: admin,
+    folder: "avatars",
   });
 
   if (response.error) {

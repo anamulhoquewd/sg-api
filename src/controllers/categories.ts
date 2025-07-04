@@ -1,11 +1,16 @@
 import { Context } from "hono";
-import { badRequestHandler, serverErrorHandler } from "../middlewares";
+import {
+  authenticationError,
+  badRequestHandler,
+  serverErrorHandler,
+} from "../middlewares";
 import {
   getCategoryService,
   getSingleCategoryService,
   registerCategoryService,
   updateCategoryService,
   deleteCategoryService,
+  uploadSingleFile,
 } from "../services";
 import { defaults } from "../config/defaults";
 
@@ -100,10 +105,56 @@ const deleteCategory = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
+// Change Category Avatar
+const changeCategoryAvatar = async (c: Context) => {
+  const body = await c.req.parseBody();
+  const categoryId = c.req.query("categoryId");
+  const file = body["avatar"] as File;
+
+  // Get category from category id in the query params
+  if (!categoryId) {
+    return badRequestHandler(c, {
+      message: "Category ID is required",
+    });
+  }
+
+  const categoryResponse = await getSingleCategoryService(categoryId);
+
+  if (categoryResponse.error) {
+    return badRequestHandler(c, categoryResponse.error);
+  }
+
+  if (categoryResponse.serverError) {
+    return serverErrorHandler(c, categoryResponse.serverError);
+  }
+
+  // Generate filename
+  const fileN = c.req.query("filename") || "avatar";
+  const filename = `${fileN}-${Date.now()}.webp`;
+
+  const response = await uploadSingleFile({
+    body: { avatar: file },
+    filename,
+    collection: categoryResponse.success.data,
+    folder: "categories",
+  });
+
+  if (response.error) {
+    return badRequestHandler(c, response.error);
+  }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
+};
+
 export {
   registerCategory,
   getCategories,
   getSingleCategory,
   updateCategory,
   deleteCategory,
+  changeCategoryAvatar,
 };

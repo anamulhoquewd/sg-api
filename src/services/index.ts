@@ -9,7 +9,7 @@ import {
   changePasswordService,
   forgotPasswordService,
   resetPasswordService,
-  changeAvatarService,
+  uploadSingleFile,
   updateMeService,
 } from "./admins";
 import {
@@ -80,7 +80,7 @@ export {
   changePasswordService,
   forgotPasswordService,
   resetPasswordService,
-  changeAvatarService,
+  uploadSingleFile,
   getCustomersService,
   registerCustomerService,
   getSingleCustomerService,

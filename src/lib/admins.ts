@@ -17,16 +17,14 @@ const JWT_REFRESH_SECRET =
 const uploadAvatar = async ({
   s3,
   file,
-  filename,
-  fileType = "image/jpeg",
-  folder = "avatars",
+  key,
+  fileType = "image/webp",
   bucketName,
 }: {
   s3: S3Client;
   file: File;
-  filename: string;
+  key: string;
   fileType?: string;
-  folder?: string;
   bucketName?: string;
 }) => {
   try {
@@ -35,7 +33,7 @@ const uploadAvatar = async ({
 
     const command = new PutObjectCommand({
       Bucket: bucketName,
-      Key: `uploads/${folder}/${filename}`, // Save inside an 'uploads/avatars' folder
+      Key: key, // Save inside an 'uploads' folder
       ContentType: fileType,
       Body: buffer,
     });
@@ -50,14 +48,16 @@ const uploadAvatar = async ({
 const generateS3AccessKey = async ({
   filename,
   s3,
+  folder = "avatars",
 }: {
   filename: string;
   s3: S3Client;
+  folder?: string;
 }) => {
   try {
     const command = new GetObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME,
-      Key: `uploads/avatars/${filename}`,
+      Key: `uploads/${folder}/${filename}`,
     });
 
     return await getSignedUrl(s3, command, { expiresIn: 60 * 60 * 24 * 7 }); // Expiry set to 7 days

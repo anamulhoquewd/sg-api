@@ -14,6 +14,7 @@ import idSchema from "../utils/utils";
 import { s3 } from "../config/S3";
 import { schemaValidationError } from "./utile";
 import { AdminDocument, adminZodValidation } from "../models/Admins";
+import { CategoryDocument } from "../models/Categories";
 
 // Get environment variables
 const EMAIL_USER = process.env.EMAIL_USER
@@ -33,6 +34,7 @@ const AWS_ACCESS_KEY_ID =
   (process.env.AWS_ACCESS_KEY_ID as string) || "12345678";
 const AWS_SECRET_ACCESS_KEY =
   (process.env.AWS_SECRET_ACCESS_KEY as string) || "12345678";
+const AWS_REGION = (process.env.AWS_REGION as string) || "eu-north-1";
 
 // Get environment variables
 const DOMAIN = process.env.DOMAIN;
@@ -805,13 +807,15 @@ export const resetPasswordService = async ({
   }
 };
 
-export const changeAvatarService = async ({
-  admin,
+export const uploadSingleFile = async ({
+  collection,
   filename,
   body,
+  folder,
 }: {
-  admin: AdminDocument;
+  collection: AdminDocument | CategoryDocument;
   filename: string;
+  folder: string;
   body: {
     avatar: File;
   };
@@ -865,21 +869,22 @@ export const changeAvatarService = async ({
 
   try {
     // Upload to S3
+    const key = `uploads/${folder}/${filename}`;
     uploadAvatar({
       s3,
       file: fileValidation.data.avatar,
-      filename,
+      key,
       fileType: fileValidation.data.avatar.type,
-      folder: "avatars",
       bucketName: AWS_BUCKET_NAME,
     });
 
     // Generate signed URL
-    const url = await generateS3AccessKey({ filename, s3 });
+    // const url = await generateS3AccessKey({ filename, s3 });
+    const url = `https://${AWS_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${key}`;
 
     // Update user with avatar
-    admin.avatar = url;
-    await admin.save();
+    collection.avatar = url;
+    await collection.save();
 
     // Response
     return {

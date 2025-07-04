@@ -5,7 +5,7 @@ import { authorize, protect } from "../middlewares";
 const admins = new Hono();
 
 // Get All admins (Private)
-admins.get("/", protect, (c) => admin.getAdmins(c));
+admins.get("/", (c) => admin.getAdmins(c));
 
 // Create admin (Only can super admin)
 admins.post("/auth/register", protect, authorize(), (c) =>
@@ -37,7 +37,7 @@ admins.get("/auth/me", protect, (c) => admin.getMe(c));
 admins.patch("/auth/me", protect, (c) => admin.updateMe(c));
 
 // Upload Profile Picture (Private)
-// admins.post("/auth/uploads", protect, (c) => admin.changeAvatar(c));
+admins.post("/auth/uploads", protect, (c) => admin.changeAvatar(c));
 
 // Get Single admin (Private)
 admins.get("/:id", protect, (c) => admin.getSingleAdmin(c));

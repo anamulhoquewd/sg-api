@@ -13,6 +13,9 @@ categories.post("/register", protect, (c) => category.registerCategory(c));
 // Get Single category (Private)
 // categories.get("/:id", protect, (c) => category.getSingleCategory(c));
 
+// Upload category avatar (Private)
+categories.post("/uploads", protect, (c) => category.changeCategoryAvatar(c));
+
 // Update category (Private)
 categories.put("/:id", protect, (c) => category.updateCategory(c));
 
