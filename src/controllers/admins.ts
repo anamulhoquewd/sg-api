@@ -12,27 +12,15 @@ import {
   serverErrorHandler,
 } from "../middlewares";
 import axios from "axios";
-import {
-  uploadSingleFile,
-  changePasswordService,
-  deleteAdminService,
-  forgotPasswordService,
-  getSingleAdminService,
-  getAdminsService,
-  loginService,
-  reGenerateS3AccessKey,
-  registerAdminService,
-  resetPasswordService,
-  updateMeService,
-} from "../services";
-
+import { adminsService } from "../services";
+import { reGenerateS3AccessKey } from "../services/s3";
 config();
 
 const JWT_REFRESH_SECRET =
   (process.env.JWT_REFRESH_SECRET as string) || "refresh";
 
 // Get all admins
-const getAdmins = async (c: Context) => {
+export const getAdmins = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
   const search = c.req.query("search") || defaults.search;
@@ -40,7 +28,7 @@ const getAdmins = async (c: Context) => {
   const sortType = c.req.query("sortType") || defaults.sortType;
   const role = c.req.query("role") || "";
 
-  const response = await getAdminsService({
+  const response = await adminsService.getAdminsService({
     page,
     limit,
     search,
@@ -61,7 +49,7 @@ const getAdmins = async (c: Context) => {
 };
 
 // Get Me
-const getMe = async (c: Context) => {
+export const getMe = async (c: Context) => {
   try {
     // Get admin from auth token
     const me = c.get("admin");
@@ -117,10 +105,10 @@ const getMe = async (c: Context) => {
 };
 
 // Get Single admin
-const getSingleAdmin = async (c: Context) => {
+export const getSingleAdmin = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await getSingleAdminService(id);
+  const response = await adminsService.getSingleAdminService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -134,7 +122,7 @@ const getSingleAdmin = async (c: Context) => {
 };
 
 // Update profile
-const updateMe = async (c: Context) => {
+export const updateMe = async (c: Context) => {
   // Get admin from auth token
   const admin = c.get("admin");
 
@@ -144,7 +132,7 @@ const updateMe = async (c: Context) => {
 
   const body = await c.req.json();
 
-  const response = await updateMeService({ admin, body });
+  const response = await adminsService.updateMeService({ admin, body });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -158,10 +146,10 @@ const updateMe = async (c: Context) => {
 };
 
 // Register admin
-const registerAdmin = async (c: Context) => {
+export const registerAdmin = async (c: Context) => {
   const body = await c.req.json();
 
-  const response = await registerAdminService(body);
+  const response = await adminsService.registerAdminService(body);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -175,10 +163,10 @@ const registerAdmin = async (c: Context) => {
 };
 
 // Login admin
-const loginAdmin = async (c: Context) => {
+export const loginAdmin = async (c: Context) => {
   const body = await c.req.json();
 
-  const response = await loginService(body);
+  const response = await adminsService.loginService(body);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -210,7 +198,7 @@ const loginAdmin = async (c: Context) => {
 };
 
 // Refresh Token
-const refreshToken = async (c: Context) => {
+export const refreshToken = async (c: Context) => {
   try {
     // Get refresh token from cookie
     const rToken = await getSignedCookie(c, JWT_REFRESH_SECRET, "refreshToken");
@@ -267,7 +255,7 @@ const refreshToken = async (c: Context) => {
 };
 
 // Logout admin
-const logout = async (c: Context) => {
+export const logout = async (c: Context) => {
   try {
     // Clear cookie using Hono's deleteCookie
     const refreshToken = deleteCookie(c, "refreshToken", {
@@ -318,7 +306,7 @@ const logout = async (c: Context) => {
 };
 
 // Change Password
-const changePassword = async (c: Context) => {
+export const changePassword = async (c: Context) => {
   const body = await c.req.json();
 
   // Check if admin exists. and get email from token
@@ -330,7 +318,7 @@ const changePassword = async (c: Context) => {
     return authenticationError(c);
   }
 
-  const response = await changePasswordService({ admin, body });
+  const response = await adminsService.changePasswordService({ admin, body });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -344,10 +332,10 @@ const changePassword = async (c: Context) => {
 };
 
 // Delete admin
-const deleteAdmin = async (c: Context) => {
+export const deleteAdmin = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await deleteAdminService(id);
+  const response = await adminsService.deleteAdminService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -361,10 +349,10 @@ const deleteAdmin = async (c: Context) => {
 };
 
 // Forgot Password
-const forgotPassword = async (c: Context) => {
+export const forgotPassword = async (c: Context) => {
   const { email } = await c.req.json();
 
-  const response = await forgotPasswordService(email);
+  const response = await adminsService.forgotPasswordService(email);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -378,14 +366,17 @@ const forgotPassword = async (c: Context) => {
 };
 
 // Reset Password
-const resetPassword = async (c: Context) => {
+export const resetPassword = async (c: Context) => {
   // Token come from param
   const resetToken = c.req.param("resetToken");
 
   // Password come from body
   const { password } = await c.req.json();
 
-  const response = await resetPasswordService({ password, resetToken });
+  const response = await adminsService.resetPasswordService({
+    password,
+    resetToken,
+  });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -399,7 +390,7 @@ const resetPassword = async (c: Context) => {
 };
 
 // Change Admin Avatar
-const changeAvatar = async (c: Context) => {
+export const changeAvatar = async (c: Context) => {
   const body = await c.req.parseBody();
   const file = body["avatar"] as File;
 
@@ -413,7 +404,7 @@ const changeAvatar = async (c: Context) => {
   const fileN = c.req.query("filename") || "avatar";
   const filename = `${fileN}-${Date.now()}.webp`;
 
-  const response = await uploadSingleFile({
+  const response = await adminsService.uploadSingleFile({
     body: { avatar: file },
     filename,
     collection: admin,
@@ -429,20 +420,4 @@ const changeAvatar = async (c: Context) => {
   }
 
   return c.json(response.success, 200);
-};
-
-export {
-  getAdmins,
-  getMe,
-  updateMe,
-  getSingleAdmin,
-  registerAdmin,
-  loginAdmin,
-  changePassword,
-  deleteAdmin,
-  forgotPassword,
-  resetPassword,
-  changeAvatar,
-  refreshToken,
-  logout,
 };

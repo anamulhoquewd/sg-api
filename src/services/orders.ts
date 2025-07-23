@@ -397,7 +397,6 @@ export const getOrdersService = async (queryParams: GetOrderServiceProps) => {
       limit: queryParams.limit,
       total,
     });
-    console.log("Query: ", query);
 
     // Response
     return {

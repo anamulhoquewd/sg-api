@@ -5,7 +5,7 @@ import { authorize, protect } from "../middlewares";
 const admins = new Hono();
 
 // Get All admins (Private)
-admins.get("/", (c) => admin.getAdmins(c));
+admins.get("/", protect, (c) => admin.getAdmins(c));
 
 // Create admin (Only can super admin)
 admins.post("/auth/register", protect, authorize(), (c) =>

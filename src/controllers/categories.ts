@@ -1,23 +1,13 @@
 import { Context } from "hono";
-import {
-  authenticationError,
-  badRequestHandler,
-  serverErrorHandler,
-} from "../middlewares";
-import {
-  getCategoryService,
-  getSingleCategoryService,
-  registerCategoryService,
-  updateCategoryService,
-  deleteCategoryService,
-  uploadSingleFile,
-} from "../services";
+import { badRequestHandler, serverErrorHandler } from "../middlewares";
+import { categoriesService } from "../services";
 import { defaults } from "../config/defaults";
+import { uploadSingleFile } from "../services/admins";
 
-const registerCategory = async (c: Context) => {
+export const registerCategory = async (c: Context) => {
   const body = await c.req.json();
 
-  const response = await registerCategoryService(body);
+  const response = await categoriesService.registerCategoryService(body);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -30,14 +20,14 @@ const registerCategory = async (c: Context) => {
   return c.json(response.success, 201);
 };
 
-const getCategories = async (c: Context) => {
+export const getCategories = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
   const search = c.req.query("search") || defaults.search;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
 
-  const response = await getCategoryService({
+  const response = await categoriesService.getCategoryService({
     page,
     limit,
     search,
@@ -56,10 +46,10 @@ const getCategories = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const getSingleCategory = async (c: Context) => {
+export const getSingleCategory = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await getSingleCategoryService(id);
+  const response = await categoriesService.getSingleCategoryService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -72,11 +62,11 @@ const getSingleCategory = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const updateCategory = async (c: Context) => {
+export const updateCategory = async (c: Context) => {
   const body = await c.req.json();
   const id = c.req.param("id");
 
-  const response = await updateCategoryService({ body, id });
+  const response = await categoriesService.updateCategoryService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -89,10 +79,10 @@ const updateCategory = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const deleteCategory = async (c: Context) => {
+export const deleteCategory = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await deleteCategoryService(id);
+  const response = await categoriesService.deleteCategoryService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -106,7 +96,7 @@ const deleteCategory = async (c: Context) => {
 };
 
 // Change Category Avatar
-const changeCategoryAvatar = async (c: Context) => {
+export const changeCategoryAvatar = async (c: Context) => {
   const body = await c.req.parseBody();
   const categoryId = c.req.query("categoryId");
   const file = body["avatar"] as File;
@@ -118,7 +108,9 @@ const changeCategoryAvatar = async (c: Context) => {
     });
   }
 
-  const categoryResponse = await getSingleCategoryService(categoryId);
+  const categoryResponse = await categoriesService.getSingleCategoryService(
+    categoryId
+  );
 
   if (categoryResponse.error) {
     return badRequestHandler(c, categoryResponse.error);
@@ -148,13 +140,4 @@ const changeCategoryAvatar = async (c: Context) => {
   }
 
   return c.json(response.success, 200);
-};
-
-export {
-  registerCategory,
-  getCategories,
-  getSingleCategory,
-  updateCategory,
-  deleteCategory,
-  changeCategoryAvatar,
 };

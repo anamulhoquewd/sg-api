@@ -3,15 +3,16 @@ import { z } from "zod";
 
 // Payment Interface
 export interface PaymentDocument extends Document {
+  tran_id: string;
   order: Schema.Types.ObjectId;
   customer: Schema.Types.ObjectId;
   method: "cash" | "bkash" | "nagad" | "card";
-  status: "pending" | "paid" | "failed";
+  status: "pending" | "paid" | "failed" | "refunded";
   amount: number;
-  transactionId?: string;
 }
 
 const paymentZodValidation = z.object({
+  tran_id: z.string(),
   order: z
     .any()
     .transform((val) =>
@@ -29,7 +30,7 @@ const paymentZodValidation = z.object({
       message: "Invalid MongoDB Product ID format",
     }),
   method: z.enum(["cash", "bkash", "nagad", "card"]),
-  status: z.enum(["pending", "paid", "failed"]),
+  status: z.enum(["pending", "paid", "failed", "refunded"]),
   amount: z.number(),
   transactionId: z.string().optional(),
 });
@@ -37,6 +38,7 @@ const paymentZodValidation = z.object({
 // Payment Schema
 const paymentSchema = new Schema<PaymentDocument>(
   {
+    tran_id: { type: String },
     order: { type: Schema.Types.ObjectId, ref: "Order", required: true },
     customer: { type: Schema.Types.ObjectId, ref: "User", required: true },
     method: {
@@ -46,11 +48,10 @@ const paymentSchema = new Schema<PaymentDocument>(
     },
     status: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
     amount: { type: Number, required: true },
-    transactionId: { type: String },
   },
   { timestamps: true }
 );

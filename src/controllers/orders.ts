@@ -1,18 +1,10 @@
 import { Context } from "hono";
 import { defaults } from "../config/defaults";
 import { badRequestHandler, serverErrorHandler } from "../middlewares";
-import {
-  getOrdersService,
-  getSingleOrderService,
-  registerOrderService,
-  deleteOrderService,
-  updateOrderAdjustmentService,
-  updateOrderStatueService,
-  updateOrderItemsService,
-} from "../services";
+import { ordersService } from "../services";
 
 // et all orders
-const getOrders = async (c: Context) => {
+export const getOrders = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
@@ -60,7 +52,7 @@ const getOrders = async (c: Context) => {
     to: toDate,
   };
 
-  const response = await getOrdersService({
+  const response = await ordersService.getOrdersService({
     page,
     limit,
     sortBy,
@@ -87,10 +79,10 @@ const getOrders = async (c: Context) => {
 };
 
 // Create order
-const registerOrder = async (c: Context) => {
+export const registerOrder = async (c: Context) => {
   const body = await c.req.json();
 
-  const response = await registerOrderService(body);
+  const response = await ordersService.registerOrderService(body);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -104,10 +96,10 @@ const registerOrder = async (c: Context) => {
 };
 
 // Get single order
-const getSingleOrder = async (c: Context) => {
+export const getSingleOrder = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await getSingleOrderService(id);
+  const response = await ordersService.getSingleOrderService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -121,11 +113,14 @@ const getSingleOrder = async (c: Context) => {
 };
 
 // Update order adjustment
-const updateOrderAdjustment = async (c: Context) => {
+export const updateOrderAdjustment = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateOrderAdjustmentService({ id, body });
+  const response = await ordersService.updateOrderAdjustmentService({
+    id,
+    body,
+  });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -139,11 +134,11 @@ const updateOrderAdjustment = async (c: Context) => {
 };
 
 // Update order status
-const updateOrderStatus = async (c: Context) => {
+export const updateOrderStatus = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateOrderStatueService({ id, body });
+  const response = await ordersService.updateOrderStatueService({ id, body });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -157,11 +152,11 @@ const updateOrderStatus = async (c: Context) => {
 };
 
 // Update order Items
-const updateOrderItems = async (c: Context) => {
+export const updateOrderItems = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateOrderItemsService({ id, body });
+  const response = await ordersService.updateOrderItemsService({ id, body });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -175,10 +170,10 @@ const updateOrderItems = async (c: Context) => {
 };
 
 // Delete order
-const deleteOrder = async (c: Context) => {
+export const deleteOrder = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await deleteOrderService(id);
+  const response = await ordersService.deleteOrderService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -189,14 +184,4 @@ const deleteOrder = async (c: Context) => {
   }
 
   return c.json(response.success, 200);
-};
-
-export {
-  getOrders,
-  registerOrder,
-  getSingleOrder,
-  updateOrderAdjustment,
-  deleteOrder,
-  updateOrderItems,
-  updateOrderStatus,
 };

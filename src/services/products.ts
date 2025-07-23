@@ -660,6 +660,14 @@ export const updateUnitService = async ({
     }
     if (bodyValidation.data.stockQuantity) {
       product.unit.stockQuantity = bodyValidation.data.stockQuantity;
+
+      if (product.unit.stockQuantity > product.lowStockThreshold) {
+        product.status = "inStock";
+      } else if (product.unit.stockQuantity === 0) {
+        product.status = "outOfStock";
+      } else {
+        product.status = "lowStock";
+      }
     }
     if (bodyValidation.data.unitType) {
       product.unit.unitType = bodyValidation.data.unitType;

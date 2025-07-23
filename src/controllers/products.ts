@@ -1,25 +1,13 @@
 import { Context } from "hono";
 import { badRequestHandler, serverErrorHandler } from "../middlewares";
-import {
-  getSingleProductSercive,
-  registerProductService,
-  deleteProductService,
-  uploadMediaService,
-  updateUnitService,
-  updateGeneralService,
-  updateVisibilityService,
-  updateOnlyCategoryService,
-  deleteMediaService,
-  includesMediaUrlsService,
-} from "../services";
-import { getProductsService } from "../services";
+import { productsService } from "../services";
 import { defaults } from "../config/defaults";
 
 // Register new customer
-const registerProduct = async (c: Context) => {
+export const registerProduct = async (c: Context) => {
   const body = await c.req.json();
 
-  const response = await registerProductService(body);
+  const response = await productsService.registerProductService(body);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -32,11 +20,11 @@ const registerProduct = async (c: Context) => {
   return c.json(response.success, 201);
 };
 
-const uploadMedia = async (c: Context) => {
+export const uploadMedia = async (c: Context) => {
   const body = await c.req.parseBody({ all: true });
   const slug = c.req.query("slug") || "";
 
-  const response = await uploadMediaService({ body, slug });
+  const response = await productsService.uploadMediaService({ body, slug });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -49,7 +37,7 @@ const uploadMedia = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const getProducts = async (c: Context) => {
+export const getProducts = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
   const search = c.req.query("search") || defaults.search;
@@ -65,7 +53,7 @@ const getProducts = async (c: Context) => {
   const visibility =
     isVisible === "false" ? false : isVisible === "true" ? true : "";
 
-  const response = await getProductsService({
+  const response = await productsService.getProductsService({
     page,
     limit,
     search,
@@ -88,10 +76,10 @@ const getProducts = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const getSingleProduct = async (c: Context) => {
+export const getSingleProduct = async (c: Context) => {
   const slug = c.req.param("slug");
 
-  const response = await getSingleProductSercive(slug);
+  const response = await productsService.getSingleProductSercive(slug);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -104,10 +92,10 @@ const getSingleProduct = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const deleteProduct = async (c: Context) => {
+export const deleteProduct = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await deleteProductService(id);
+  const response = await productsService.deleteProductService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -120,28 +108,11 @@ const deleteProduct = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const updateUnit = async (c: Context) => {
-  const id = c.req.param("id");
-  const body = await c.req.json();
-
-  const response = await updateUnitService({ body, id });
-
-  if (response.error) {
-    return badRequestHandler(c, response.error);
-  }
-
-  if (response.serverError) {
-    return serverErrorHandler(c, response.serverError);
-  }
-
-  return c.json(response.success, 200);
-};
-
-const updateGeneral = async (c: Context) => {
+export const updateUnit = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateGeneralService({ body, id });
+  const response = await productsService.updateUnitService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -154,11 +125,11 @@ const updateGeneral = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const updateVisibility = async (c: Context) => {
+export const updateGeneral = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateVisibilityService({ body, id });
+  const response = await productsService.updateGeneralService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -171,11 +142,11 @@ const updateVisibility = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const includesMediaUrls = async (c: Context) => {
+export const updateVisibility = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await includesMediaUrlsService({ body, id });
+  const response = await productsService.updateVisibilityService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -188,11 +159,11 @@ const includesMediaUrls = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const deleteMedia = async (c: Context) => {
+export const includesMediaUrls = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await deleteMediaService({ body, id });
+  const response = await productsService.includesMediaUrlsService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -205,11 +176,11 @@ const deleteMedia = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-const updateCategory = async (c: Context) => {
+export const deleteMedia = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateOnlyCategoryService({ body, id });
+  const response = await productsService.deleteMediaService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -222,16 +193,22 @@ const updateCategory = async (c: Context) => {
   return c.json(response.success, 200);
 };
 
-export {
-  registerProduct,
-  getProducts,
-  getSingleProduct,
-  deleteProduct,
-  uploadMedia,
-  updateUnit,
-  updateCategory,
-  updateGeneral,
-  updateVisibility,
-  includesMediaUrls,
-  deleteMedia,
+export const updateCategory = async (c: Context) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+
+  const response = await productsService.updateOnlyCategoryService({
+    body,
+    id,
+  });
+
+  if (response.error) {
+    return badRequestHandler(c, response.error);
+  }
+
+  if (response.serverError) {
+    return serverErrorHandler(c, response.serverError);
+  }
+
+  return c.json(response.success, 200);
 };

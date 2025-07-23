@@ -1,23 +1,17 @@
 import { Context } from "hono";
 import { defaults } from "../config/defaults";
 import { badRequestHandler, serverErrorHandler } from "../middlewares";
-import {
-  deleteCustomerService,
-  getCustomersService,
-  getSingleCustomerService,
-  registerCustomerService,
-  updateCustomerService,
-} from "../services";
+import { customersService } from "../services";
 
 // Get All customers
-const getCustomers = async (c: Context) => {
+export const getCustomers = async (c: Context) => {
   const page = parseInt(c.req.query("page") as string, 10) || defaults.page;
   const limit = parseInt(c.req.query("limit") as string, 10) || defaults.limit;
   const search = c.req.query("search") || defaults.search;
   const sortBy = c.req.query("sortBy") || defaults.sortBy;
   const sortType = c.req.query("sortType") || defaults.sortType;
 
-  const response = await getCustomersService({
+  const response = await customersService.getCustomersService({
     page,
     limit,
     sortType,
@@ -37,10 +31,10 @@ const getCustomers = async (c: Context) => {
 };
 
 // Register new customer
-const registerCustomer = async (c: Context) => {
+export const registerCustomer = async (c: Context) => {
   const body = await c.req.json();
 
-  const response = await registerCustomerService(body);
+  const response = await customersService.registerCustomerService(body);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -54,10 +48,10 @@ const registerCustomer = async (c: Context) => {
 };
 
 // Get Single Customer
-const getSingleCustomer = async (c: Context) => {
+export const getSingleCustomer = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await getSingleCustomerService(id);
+  const response = await customersService.getSingleCustomerService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -71,11 +65,11 @@ const getSingleCustomer = async (c: Context) => {
 };
 
 // Update Customer
-const updateCustomer = async (c: Context) => {
+export const updateCustomer = async (c: Context) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const response = await updateCustomerService({ body, id });
+  const response = await customersService.updateCustomerService({ body, id });
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -89,10 +83,10 @@ const updateCustomer = async (c: Context) => {
 };
 
 // Delete Customer
-const deleteCustomer = async (c: Context) => {
+export const deleteCustomer = async (c: Context) => {
   const id = c.req.param("id");
 
-  const response = await deleteCustomerService(id);
+  const response = await customersService.deleteCustomerService(id);
 
   if (response.error) {
     return badRequestHandler(c, response.error);
@@ -103,12 +97,4 @@ const deleteCustomer = async (c: Context) => {
   }
 
   return c.json(response.success, 200);
-};
-
-export {
-  getCustomers,
-  registerCustomer,
-  getSingleCustomer,
-  updateCustomer,
-  deleteCustomer,
 };

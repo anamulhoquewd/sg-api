@@ -6,7 +6,6 @@ import { defaults } from "../config/defaults";
 import {
   generateAccessToken,
   generateRefreshToken,
-  generateS3AccessKey,
   pagination,
   uploadAvatar,
 } from "../lib";

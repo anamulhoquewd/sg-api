@@ -7,8 +7,7 @@ import { prettyJSON } from "hono/pretty-json";
 import { logger } from "hono/logger";
 import { notFound, protect } from "./middlewares";
 import { admins, customers, orders, payments, products } from "./routes";
-import { admin } from "./controllers";
-import { superAdminService } from "./services";
+import { adminsService } from "./services";
 import categories from "./routes/categories";
 
 config();
@@ -19,7 +18,7 @@ const app = new Hono().basePath("/api/v1");
 connectDB()
   .then(async () => {
     // Call the Super Admin Service function after connecting to MongoDB
-    const result = await superAdminService();
+    const result = await adminsService.superAdminService();
 
     if (result.success) {
       console.log(result.message || "Super admin created successfully!");
